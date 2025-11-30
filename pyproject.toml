@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "endstone-primebds"
-version = "3.1.4"
+version = "3.2.0"
 description = "An essentials plugin for diagnostics, stability, and quality of life on Minecraft Bedrock Edition."
 author = "PrimeStrat"
 dependencies = [

@@ -37,6 +37,15 @@ def preload_settings():
             "prefix": "§l§8[§c!§8] §r§e",
             "playsound": "random.toast"
         }),
+        "rtp": OrderedDict({
+            "x": 0,
+            "z": 0,
+            "min_distance": 100,
+            "radius": 1000,
+            "cost": 0,
+            "delay": 0,
+            "cooldown": 0
+        }),
         "permissions_manager": OrderedDict({
             "primebds": True,
             "endstone": True,
