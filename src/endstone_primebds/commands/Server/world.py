@@ -47,8 +47,6 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
        sender.send_message("§cThis command cannot be automated")
        return False
 
-
-
     subaction = args[0].lower() if len(args) > 0 else None
     world_name = args[1] if len(args) > 1 else None
 
