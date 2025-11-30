@@ -190,7 +190,6 @@ class PrimeBDS(Plugin):
 
     @event_handler()
     def on_server_load(self, ev: ServerLoadEvent):
-
         eco = get_eco_link(self)
         if eco:
             name = perms_util.get_permission_header(eco)
