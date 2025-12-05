@@ -175,7 +175,6 @@ def run_post_corrections(self: "PrimeBDS", sender: Player, dim, attempts=0):
         new_y = dim.get_highest_block_y_at(lx, lz)
         current_y = sender.location.y
 
-        # Only correct if surface changed significantly
         if abs(new_y - current_y) > 0.5:
             sender.teleport(
                 Location(
