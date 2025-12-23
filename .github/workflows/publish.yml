@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   publish:
-    if: github.repository == 'EndstoneMC/python-plugin-template'
+    if: github.repository == 'MacherG7/primebds'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
