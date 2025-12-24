@@ -53,13 +53,14 @@ def start_additional_servers(self: "PrimeBDS"):
 def stop_additional_servers(self: "PrimeBDS"):
     threads = []
 
-    for level_name in list(self.multiworld_processes.items()):
+    # FIX: Changed from .items() to .keys() to get level names, not tuples
+    for level_name in list(self.multiworld_processes.keys()):
         thread = threading.Thread(target=stop_world, args=(self, level_name))
         thread.start()
         threads.append(thread)
 
     for thread in threads:
-        thread.join()
+        thread.join(timeout=10)  # Add timeout to prevent infinite hanging
 
     self.multiworld_processes.clear()
     
@@ -118,43 +119,54 @@ def stop_world(self, world_key: str):
     """Stop a single world by name, including orphan processes in its folder."""
     to_stop = []
 
+    # FIX: Collect level names to stop first (avoid holding lock during iteration)
     with self.multiworld_lock:
-        for level_name, proc in self.multiworld_processes.items():
+        for level_name, proc in list(self.multiworld_processes.items()):
             if level_name.startswith(world_key):
                 self.seen_level_names.pop(world_key, None)
-                to_stop.append(level_name)
+                to_stop.append((level_name, proc))
 
-    for level_name in to_stop:
-        proc = self.multiworld_processes.get(level_name)
+    # FIX: Stop processes outside the lock to prevent deadlocks
+    for level_name, proc in to_stop:
         if proc is None:
             continue
 
         print(f"[PrimeBDS] Stopping world '{level_name}'")
         try:
             if proc.stdin:
-                hostname = socket.gethostname()
-                ip = socket.gethostbyname(hostname)
-                start_path = os.path.dirname(os.path.abspath(__file__))
-                server_properties = find_and_load_config("server.properties", start_path)
-                port = int(server_properties.get("server-port", 19132))
-                proc.stdin.write(f"send @a {ip} {port}\n")
-                proc.stdin.write("stop\n")
-                proc.stdin.flush()
+                try:
+                    hostname = socket.gethostname()
+                    ip = socket.gethostbyname(hostname)
+                    start_path = os.path.dirname(os.path.abspath(__file__))
+                    server_properties = find_and_load_config("server.properties", start_path)
+                    port = int(server_properties.get("server-port", 19132))
+                    
+                    # FIX: Add timeout and error handling for stdin operations
+                    proc.stdin.write(f"send @a {ip} {port}\n")
+                    proc.stdin.write("stop\n")
+                    proc.stdin.flush()
+                except (BrokenPipeError, OSError) as e:
+                    print(f"[PrimeBDS] Could not send commands to '{level_name}': {e}")
+                except Exception as e:
+                    print(f"[PrimeBDS] Error writing to stdin for '{level_name}': {e}")
+                    
             try:
                 proc.wait(timeout=5)
                 print(f"[PrimeBDS] Process for '{level_name}' stopped gracefully.")
             except subprocess.TimeoutExpired:
                 print(f"[PrimeBDS] Process for '{level_name}' did not stop in time, killing...")
                 proc.kill()
-                proc.wait()
+                proc.wait(timeout=2)
                 print(f"[PrimeBDS] Process for '{level_name}' killed.")
         except Exception as e:
             print(f"[PrimeBDS] Error stopping process for '{level_name}': {e}")
 
+        # FIX: Remove from dict after processing (avoid lock contention)
         with self.multiworld_lock:
             self.multiworld_processes.pop(level_name, None)
             self.multiworld_ports.pop(level_name, None)
 
+    # If no processes were stopped, check for orphan processes
     if not to_stop:
         world_dir = os.path.join(self.multiworld_base_dir, world_key)
         if os.path.exists(world_dir):
