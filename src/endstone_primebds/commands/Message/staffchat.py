@@ -41,7 +41,7 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
             sender.send_message(f"§6Staff Chat has been {f'§aEnabled' if new_status == 1 else f'§cDisabled'}")
         else:
             config = load_config()
-            message = f"{config["modules"]["server_messages"]["staff_chat_prefix"]}§e{sender.name}§7: §6{args[0]}"
+            message = f"{config['modules']['server_messages']['staff_chat_prefix']}{sender.name}: {args[0]}"
             self.server.broadcast(message, "primebds.command.staffchat")
 
     return True
