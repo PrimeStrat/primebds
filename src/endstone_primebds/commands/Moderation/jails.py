@@ -69,7 +69,7 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
             if jail:
                 if isinstance(sender, Player):
                     sender.teleport(jail["pos"])
-                    sender.send_message(f"§6Teleported to jail §e'{jail["name"]}'")
+                    sender.send_message(f"Teleported to jail '{jail['name']}'")
                 else:
                     sender.send_message("§cOnly players can be teleported")
             else:
