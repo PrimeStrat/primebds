@@ -1,12 +1,16 @@
-from endstone._internal.endstone_python import (
+
+from endstone.form import (
     ActionForm,
     Dropdown,
     ModalForm,
-    Player,
     Slider,
     TextInput,
     Toggle,
+    MessageForm,
 )
+
+from endstone import Player
+
 import json
 
 class ActionFormResponse:
@@ -301,7 +305,6 @@ class ModalFormData:
             self._callback(player, response)
 
 
-from endstone._internal.endstone_python import MessageForm, Player
 
 
 class MessageFormResponse:

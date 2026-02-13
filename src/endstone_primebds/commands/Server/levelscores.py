@@ -3,7 +3,7 @@ import os
 from typing import TYPE_CHECKING, List
 
 from endstone import Player
-from endstone._internal.endstone_python import DisplaySlot, ObjectiveSortOrder
+from endstone.scoreboard import DisplaySlot, ObjectiveSortOrder
 from endstone.command import CommandSender
 from endstone.scoreboard import Criteria
 
