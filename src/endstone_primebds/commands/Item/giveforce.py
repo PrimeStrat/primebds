@@ -1,5 +1,5 @@
 from endstone.command import CommandSender
-from endstone._internal.endstone_python import ItemStack
+from endstone.inventory import ItemStack
 from endstone_primebds.utils.command_util import create_command
 from endstone_primebds.utils.target_selector_util import get_matching_actors
 

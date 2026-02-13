@@ -55,7 +55,6 @@ from endstone_primebds.handlers.gamerules import handle_bed_enter_event, handle_
 class PrimeBDS(Plugin):
     api_version = "0.10"
     authors = ["PrimeStrat"]
-    name = "primebds"
     description = "An essentials plugin for diagnostics, stability, and quality of life on Minecraft Bedrock Edition."
     website = "https://github.com/PrimeStrat/primebds"
     

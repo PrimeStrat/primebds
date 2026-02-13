@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 from time import time
 
 from endstone import Player
-from endstone._internal.endstone_python import Vector
+from endstone.util import Vector
 from endstone.event import ActorDamageEvent, ActorKnockbackEvent
 
 from endstone_primebds.utils.config_util import load_config

@@ -244,7 +244,7 @@ def check_unset_scoreboards(self):
             objective = self.server.scoreboard.get_objective(obj_name)
             if not objective:
                 # If objective not present, add it with DUMMY criteria
-                from endstone._internal.endstone_python import Criteria
+                from endstone.scoreboard import Criteria
                 criteria = Criteria.DUMMY
                 display_name = obj_data.get("display_name", obj_name)
                 objective = self.server.scoreboard.add_objective(obj_name, criteria, display_name)
