@@ -1,22 +1,48 @@
 from endstone.command import CommandSender
 from endstone_primebds.utils.command_util import create_command
 from endstone_primebds.utils.target_selector_util import get_matching_actors
+from endstone.enchantments import Enchantment
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from endstone_primebds.primebds import PrimeBDS
 
-# Register command
+def _collect_enchantment_names() -> list[str]:
+    names = []
+    try:
+        if hasattr(Enchantment, 'values'):
+            vals = Enchantment.values()
+            names = [getattr(v, 'name', str(v)).lower() for v in vals]
+        elif hasattr(Enchantment, 'all'):
+            vals = Enchantment.all()
+            names = [getattr(v, 'name', str(v)).lower() for v in vals]
+        elif hasattr(Enchantment, '__members__'):
+            names = [m.lower() for m in Enchantment.__members__.keys()]
+        else:
+            try:
+                for v in Enchantment:
+                    names.append(getattr(v, 'name', str(v)).lower())
+            except Exception:
+                for k, v in vars(Enchantment).items():
+                    if not k.startswith('_') and k.isupper():
+                        names.append(k.lower())
+    except Exception:
+        names = []
+
+    return sorted(list(dict.fromkeys([n for n in names if n])))
+
+ENCHANT_NAMES = _collect_enchantment_names()
+
+if ENCHANT_NAMES:
+    enchant_group = "(" + "|".join(ENCHANT_NAMES) + ")"
+    USAGE = f"/enchantforce <player: player> {enchant_group}[enchantment: enchantment][level: int]"
+else:
+    USAGE = "/enchantforce <player: player> [enchant] [level: int]"
+
 command, permission = create_command(
     "enchantforce",
     "Forces a given enchantment onto an item!",
-    ["/enchantforce <player: player> "
-    "(aqua_affinity|bane_of_arthropods|binding|blast_protection|breach"
-    "|channeling|density|depth_strider|efficiency|feather_falling|fire_aspect|"
-    "fire_protection|flame|fortune|frost_walker|impaling|infinity|knockback|"
-    "looting|loyalty|luck_of_the_sea|lure|mending|multishot|piercing|power|"
-    "projectile_protection|protection|punch|quick_charge|respiration|riptide|"
-    "sharpness|silk_touch|smite|soul_speed|swift_sneak|thorns|unbreaking|vanishing)[enchantment: enchantment][level: int]"],
+    [USAGE],
     ["primebds.command.enchantforce"],
     "op",
     ["enchantf", "forceenchant"]
@@ -47,23 +73,6 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
     targets = get_matching_actors(self, target_selector, sender)
     if not targets:
         sender.send_message("§cNo matching players found")
-        return False
-    
-    try:
-        try:
-            from endstone._internal.endstone_python import NamespacedKey
-            has_namespacedkey = True
-        except ImportError:
-            has_namespacedkey = False
-
-        if has_namespacedkey:
-            key = NamespacedKey(self, enchant_name)
-            self.server.enchantment_registry.get_or_throw(key)
-        else:
-            self.server.enchantment_registry.get_or_throw(enchant_name)
-
-    except Exception:
-        sender.send_message(f"§cEnchantment '{enchant_name}' is not registered")
         return False
 
     for target in targets:
