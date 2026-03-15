@@ -1385,7 +1385,14 @@ class UserDB(DatabaseManager):
         ).fetchone()
 
         if row:
-            mod_log = ModLog(*row)
+            column_info = self.execute("PRAGMA table_info(mod_logs)").fetchall()
+            column_names = [col[1] for col in column_info]
+            raw_data = dict(zip(column_names, row))
+
+            modlog_fields = {f.name for f in fields(ModLog)}
+            filtered = {k: v for k, v in raw_data.items() if k in modlog_fields}
+
+            mod_log = ModLog(**filtered)
             self._cache[f"modlog:{xuid}"] = (mod_log, time.time())
             return mod_log
         return None
@@ -1811,7 +1818,17 @@ class UserDB(DatabaseManager):
 
     def get_offline_mod_log(self, name: str) -> Optional[ModLog]:
         row = self.execute("SELECT * FROM mod_logs WHERE name = ?", (name,), readonly=True).fetchone()
-        return ModLog(*row) if row else None
+        if not row:
+            return None
+
+        column_info = self.execute("PRAGMA table_info(mod_logs)").fetchall()
+        column_names = [col[1] for col in column_info]
+        raw_data = dict(zip(column_names, row))
+
+        modlog_fields = {f.name for f in fields(ModLog)}
+        filtered = {k: v for k, v in raw_data.items() if k in modlog_fields}
+
+        return ModLog(**filtered)
 
     def get_xuid_by_name(self, player_name: str) -> str | None:
         if player_name in self._name_to_xuid_cache:
