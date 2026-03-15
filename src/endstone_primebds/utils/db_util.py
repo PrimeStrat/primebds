@@ -3,6 +3,7 @@ import os
 import re
 import sqlite3
 import threading
+import ast
 from dataclasses import dataclass, fields
 import time
 from typing import List, Tuple, Any, Dict, Optional
@@ -2110,12 +2111,30 @@ class UserDB(DatabaseManager):
             try:
 
                 try:
-                    enchants = {} if not row[6] or row[6] in ("null", "0") else eval(row[6])
+                    if not row[6] or row[6] in ("null", "0"):
+                        enchants = {}
+                    else:
+                        try:
+                            enchants = json.loads(row[6])
+                        except Exception:
+                            try:
+                                enchants = ast.literal_eval(row[6])
+                            except Exception:
+                                enchants = {}
                 except Exception:
                     enchants = {}
 
                 try:
-                    lore = [] if not row[7] or row[7] in ("null", "0") else eval(row[7])
+                    if not row[7] or row[7] in ("null", "0"):
+                        lore = []
+                    else:
+                        try:
+                            lore = json.loads(row[7])
+                        except Exception:
+                            try:
+                                lore = ast.literal_eval(row[7])
+                            except Exception:
+                                lore = []
                 except Exception:
                     lore = []
 

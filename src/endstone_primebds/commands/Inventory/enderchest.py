@@ -166,6 +166,65 @@ def show_chest(self, sender, title: str, items: list[dict], allow_armor: bool = 
             item_data=item_data,
             display_name=display_name,
             lore=entry.get("lore"),
-            enchants=entry.get("enchants"),
+            enchants=_format_enchants_for_chest(entry.get("enchants")),
         )
     chest.send_to(sender)
+
+
+def _format_enchants_for_chest(e):
+    """Normalize various enchant representations into a dict: {id: level}.
+
+    ChestForm expects a dict mapping enchant id -> level.
+    """
+    if not e:
+        return None
+
+    if isinstance(e, dict):
+        out = {}
+        for k, v in e.items():
+            try:
+                out[str(k)] = int(v)
+            except Exception:
+                out[str(k)] = v
+        return out if out else None
+
+    if isinstance(e, (list, tuple)):
+        out = {}
+        for it in e:
+            if isinstance(it, dict):
+                key = it.get("id") or it.get("name") or it.get("key")
+                lvl = it.get("level") or it.get("lvl") or it.get("value")
+                if key:
+                    try:
+                        out[str(key)] = int(lvl) if lvl is not None else 1
+                    except Exception:
+                        out[str(key)] = lvl
+            elif isinstance(it, (list, tuple)) and len(it) >= 2:
+                try:
+                    out[str(it[0])] = int(it[1])
+                except Exception:
+                    out[str(it[0])] = it[1]
+        return out if out else None
+
+    if isinstance(e, str):
+        import json as _json, ast as _ast
+        try:
+            parsed = _json.loads(e)
+            return _format_enchants_for_chest(parsed)
+        except Exception:
+            try:
+                parsed = _ast.literal_eval(e)
+                return _format_enchants_for_chest(parsed)
+            except Exception:
+                return None
+
+    try:
+        out = {}
+        for k, v in e:
+            try:
+                out[str(k)] = int(v)
+            except Exception:
+                out[str(k)] = v
+        return out if out else None
+    except Exception:
+        return None

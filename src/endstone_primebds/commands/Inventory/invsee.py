@@ -83,16 +83,7 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
 
 def normalize_item(item, slot: int | None = None, slot_type: str | None = None):
     def invalid_item(slot: int | None = None, slot_type: str | None = None):
-        return {
-            "slot": slot,
-            "slot_type": slot_type,
-            "type": "minecraft:barrier",
-            "amount": 1,
-            "data": 0,
-            "display_name": "§cItem No Longer Exists",
-            "lore": None,
-            "enchants": None,
-        }
+        return {}
 
     if not item:
         return None
@@ -115,7 +106,7 @@ def normalize_item(item, slot: int | None = None, slot_type: str | None = None):
             "data": data,
             "display_name": item.get("display_name"),
             "lore": item.get("lore"),
-            "enchants": item.get("enchants"),
+            "enchants": _normalize_enchants(item.get("enchants")),
         }
 
     else:
@@ -137,8 +128,75 @@ def normalize_item(item, slot: int | None = None, slot_type: str | None = None):
             "data": data,
             "display_name": getattr(meta, "display_name", None) if meta else None,
             "lore": getattr(meta, "lore", None) if meta else None,
-            "enchants": getattr(meta, "enchants", None) if meta else None,
+            "enchants": _normalize_enchants(getattr(meta, "enchants", None)) if meta else None,
         }
+
+
+def _enchant_key_to_str(k) -> str:
+    try:
+        if k is None:
+            return "None"
+        if isinstance(k, str):
+            return k
+        return getattr(k, "name", None) or getattr(k, "key", None) or str(k)
+    except Exception:
+        return str(k)
+
+def _normalize_enchants(src):
+    """Return a mapping of enchant-name -> level or None if unknown.
+
+    Accepts dicts, lists, or string-encoded dicts (JSON/SNBT-like)."""
+    if src is None:
+        return None
+
+    if isinstance(src, dict):
+        out = {}
+        for k, v in src.items():
+            key = _enchant_key_to_str(k)
+            try:
+                out[key] = int(v)
+            except Exception:
+                out[key] = v
+        return out
+
+    if isinstance(src, (list, tuple)):
+        out = {}
+        for e in src:
+            if isinstance(e, dict):
+                key = e.get("id") or e.get("name") or e.get("enchant") or e.get("key")
+                lvl = e.get("level") or e.get("lvl") or e.get("value")
+                if key:
+                    try:
+                        out[str(key)] = int(lvl) if lvl is not None else 1
+                    except Exception:
+                        out[str(key)] = lvl
+            elif isinstance(e, (list, tuple)) and len(e) >= 2:
+                try:
+                    out[str(e[0])] = int(e[1])
+                except Exception:
+                    out[str(e[0])] = e[1]
+        return out
+
+    if isinstance(src, str):
+        import json as _json
+        import ast as _ast
+        try:
+            parsed = _json.loads(src)
+            return _normalize_enchants(parsed)
+        except Exception:
+            try:
+                parsed = _ast.literal_eval(src)
+                return _normalize_enchants(parsed)
+            except Exception:
+                return None
+
+    try:
+        out = {}
+        for k, v in src:
+            out[_enchant_key_to_str(k)] = int(v)
+        return out
+    except Exception:
+        return None
 
 def build_item_list(items: list[dict]) -> str:
     lines = []
@@ -197,7 +255,70 @@ def show_chest(self, sender, title: str, items: list[dict], allow_armor: bool):
             item_data=item_data,
             display_name=display_name,
             lore=entry.get("lore"),
-            enchants=entry.get("enchants"),
+            enchants=_format_enchants_for_chest(entry.get("enchants")),
         )
     chest.send_to(sender)
+
+
+def _format_enchants_for_chest(e):
+    """Normalize various enchant representations into a dict: {id: level}.
+
+    ChestForm expects a dict mapping enchant id -> level.
+    """
+    if not e:
+        return None
+
+    # If already a dict mapping
+    if isinstance(e, dict):
+        out = {}
+        for k, v in e.items():
+            try:
+                out[str(k)] = int(v)
+            except Exception:
+                out[str(k)] = v
+        return out if out else None
+
+    # If list of pairs or dicts
+    if isinstance(e, (list, tuple)):
+        out = {}
+        for it in e:
+            if isinstance(it, dict):
+                key = it.get("id") or it.get("name") or it.get("key")
+                lvl = it.get("level") or it.get("lvl") or it.get("value")
+                if key:
+                    try:
+                        out[str(key)] = int(lvl) if lvl is not None else 1
+                    except Exception:
+                        out[str(key)] = lvl
+            elif isinstance(it, (list, tuple)) and len(it) >= 2:
+                try:
+                    out[str(it[0])] = int(it[1])
+                except Exception:
+                    out[str(it[0])] = it[1]
+        return out if out else None
+
+    # If string, try JSON then literal_eval
+    if isinstance(e, str):
+        import json as _json, ast as _ast
+        try:
+            parsed = _json.loads(e)
+            return _format_enchants_for_chest(parsed)
+        except Exception:
+            try:
+                parsed = _ast.literal_eval(e)
+                return _format_enchants_for_chest(parsed)
+            except Exception:
+                return None
+
+    # Last resort: try iterable of pairs
+    try:
+        out = {}
+        for k, v in e:
+            try:
+                out[str(k)] = int(v)
+            except Exception:
+                out[str(k)] = v
+        return out if out else None
+    except Exception:
+        return None
 
