@@ -1,6 +1,4 @@
 from datetime import datetime
-
-from endstone import GameMode
 from endstone_primebds.utils.time_util import TimezoneUtils
 from endstone_primebds.utils.mod_util import format_time_remaining
 from endstone.command import CommandSender
@@ -15,7 +13,7 @@ if TYPE_CHECKING:
 command, permission = create_command(
     "check",
     "Checks a player's client info!",
-    ["/check <player: player> (info|mod|jail|network|world)[info: info]"],
+    ["/check <player: player> (info|mod|network|world)[info: info]"],
     ["primebds.command.check"],
     "op",
     ["seen"]
@@ -54,12 +52,6 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
         last_join = user.last_join
         last_leave = user.last_leave
         status = f"§cOffline"
-        is_jailed = bool(user_mod.is_jailed)
-        jail_reason = user_mod.jail_reason
-        jail_time = user_mod.jail_time
-        jail = user_mod.jail
-        jail_return_loc = user_mod.return_jail_pos
-        jail_return_dim = user_mod.return_jail_dim
         is_ip_muted = bool(user_mod.is_ip_muted)
         is_ip_banned = bool(user_mod.is_ip_banned)
         is_banned = bool(user_mod.is_banned)
@@ -86,12 +78,6 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
         last_join = user.last_join
         last_leave = user.last_leave
         status = f"§aOnline"
-        is_jailed = bool(user_mod.is_jailed)
-        jail_reason = user_mod.jail_reason
-        jail_time = user_mod.jail_time
-        jail = user_mod.jail
-        jail_return_loc = user_mod.return_jail_pos
-        jail_return_dim = user_mod.return_jail_dim
         is_ip_muted = bool(user_mod.is_ip_muted)
         is_ip_banned = bool(user_mod.is_ip_banned)
         is_banned = bool(user_mod.is_banned)
@@ -169,32 +155,6 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
 §7- §eName Banned: §f{self.serverdb.check_nameban(player_name)}{name_ban_info}
 §7- §eMuted: §f{is_muted} §8[§7IP: {is_ip_muted}§8]{mute_info}
 §7- §eWarned: §f{bool(warning)}{warn_info}
-""")
-
-    elif filter_type == "jail":
-
-        jail_info = ""
-        
-        if is_jailed:
-            jail = self.serverdb.get_jail(jail, self.server)
-            if jail:
-                parts = jail_return_loc.split(",")
-                x = float(parts[0])
-                y = float(parts[1])
-                z = float(parts[2])
-                loc = jail["pos"]
-                jail_info = f"""
-§7  - §eJail: §f{jail['name']}
-§7  - §eJail Location: §f{round(loc.x)} {round(loc.y)} {round(loc.z)} §8[§e{loc.dimension.name}§8]
-§7  - §eJail Reason: §f{jail_reason}
-§7  - §eJail Time: §f{format_time_remaining(jail_time)}
-§7  - §eJail Return Location: §f{round(x)} {round(y)} {round(z)} §8[§e{jail_return_dim}§8]
-"""
-
-        sender.send_message(f"""§6Player Jail Information:
-§7- §eName: §f{name} §8[{status}§8]
-§7- §eRank: §f{rank}
-§7- §eJail Status: §f{is_jailed}{jail_info}
 """)
 
     elif filter_type == "network":

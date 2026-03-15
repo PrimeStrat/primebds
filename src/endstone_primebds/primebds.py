@@ -46,10 +46,9 @@ from endstone_primebds.handlers.preprocesses import handle_command_preprocess, h
 from endstone_primebds.handlers.connections import handle_login_event, handle_join_event, handle_leave_event, handle_kick_event
 from endstone_primebds.handlers.combat import handle_kb_event, handle_damage_event
 from endstone_primebds.handlers.multiworld import start_additional_servers, stop_additional_servers, is_nested_multiworld_instance
-from endstone_primebds.handlers.intervals import stop_intervals, init_jail_intervals, init_afk_intervals
-from endstone_primebds.handlers.packets import handle_packetsend_event, handle_packetreceive_event
+from endstone_primebds.handlers.intervals import stop_intervals, init_afk_intervals
 from endstone_primebds.handlers.actions import handle_gamemode_event, handle_interact_event, handle_teleport_event, handle_death_event
-from endstone_primebds.handlers.items import handle_item_pickup_event, handle_item_use, handle_item_drop_event
+from endstone_primebds.handlers.items import handle_item_pickup_event
 from endstone_primebds.handlers.gamerules import handle_bed_enter_event, handle_emote_event, handle_leaves_decay_event, handle_skin_change_event
 
 class PrimeBDS(Plugin):
@@ -132,24 +131,8 @@ class PrimeBDS(Plugin):
         handle_interact_event(self, ev)
 
     @event_handler()
-    def on_packet_send(self, ev: PacketSendEvent):
-        handle_packetsend_event(self, ev)
-
-    @event_handler()
-    def on_packet_receive(self, ev: PacketReceiveEvent):
-        handle_packetreceive_event(self, ev)
-
-    @event_handler()
-    def on_item_use(self, ev: PlayerItemConsumeEvent):
-        handle_item_use(self, ev)
-
-    @event_handler()
     def on_item_pickup(self, ev: PlayerPickupItemEvent):
         handle_item_pickup_event(self, ev)
-
-    @event_handler()
-    def on_item_drop(self, ev: PlayerDropItemEvent):
-        handle_item_drop_event(self, ev)
 
     @event_handler()
     def on_entity_hurt(self, ev: ActorDamageEvent):
@@ -211,7 +194,6 @@ class PrimeBDS(Plugin):
 
         load_config()
 
-        init_jail_intervals(self)
         init_afk_intervals(self)
         last_shutdown_time = self.serverdb.get_server_info().last_shutdown_time
         self.last_shutdown_time = last_shutdown_time 
@@ -270,8 +252,6 @@ class PrimeBDS(Plugin):
         if not user:
             self.db.save_user(player)
             user = self.db.get_online_user(player.xuid)
-
-        self.vanish_state[player.unique_id] = bool(user.is_vanish) if user else False
 
         internal_rank = perms_util.check_rank_exists(self, player, user.internal_rank)
         permissions = perms_util.get_rank_permissions(internal_rank)

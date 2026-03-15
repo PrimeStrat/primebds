@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 command, permission = create_command(
     "filterlist",
     "Lists all players with a filter!",
-    ["/filterlist (ops|default|online|offline|muted|banned|ipbanned|vanished)<plist_filter: plist_filter> [page: int]"],
+    ["/filterlist (ops|default|online|offline|muted|banned|ipbanned)<plist_filter: plist_filter> [page: int]"],
     ["primebds.command.filterlist"],
     "op",
     ["flist"]
@@ -48,13 +48,6 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
             p['name']
             for p in self.db.get_all_users()
             if p.get('internal_rank', '').lower() == "default"
-        ]
-    
-    def get_vanished():
-        return [
-            p['name']
-            for p in self.db.get_all_users()
-            if p.get('is_vanish', '') == 1
         ]
 
     def get_online():
@@ -122,8 +115,7 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
         "offline": get_offline,
         "muted": get_muted,
         "banned": get_banned,
-        "ipbanned": get_ipbanned,
-        "vanished": get_vanished
+        "ipbanned": get_ipbanned
     }
 
     if filter_type not in filters:

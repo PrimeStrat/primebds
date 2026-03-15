@@ -57,13 +57,11 @@ class User:
     perms: str
     is_silent_muted: int
     is_afk: int
-    is_vanish: int
     last_messaged: str
     last_join: int
     last_leave: int
     last_logout_pos: str
     last_logout_dim: str
-    last_vanish_blob: bytes
     enabled_mt: int
     enabled_ss: int
     enabled_ms: int
@@ -91,13 +89,6 @@ class ModLog:
     ip_address: str
     is_ip_banned: bool
     is_ip_muted: bool
-    is_jailed: bool
-    jail_time: int
-    jail_reason: str
-    jail: str
-    jail_gamemode: str
-    return_jail_pos: str
-    return_jail_dim: str
 
 @dataclass
 class Warn:
@@ -126,11 +117,6 @@ class PunishmentLog:
     reason: str
     timestamp: int
     duration: Optional[int]
-
-@dataclass
-class Jails:
-    name: str
-    pos: str
 
 @dataclass
 class Warps:
@@ -231,6 +217,32 @@ class DatabaseManager:
                 if not query.strip().upper().startswith("SELECT"):
                     self.conn.commit()
                 return self.cursor
+
+    def _serialize_enchants(self, enchants) -> str:
+        """Return a JSON string for an enchantments mapping with safe string keys.
+
+        Enchantment keys may be objects; convert them to stable string names.
+        """
+        try:
+            if not enchants:
+                return json.dumps({})
+
+            # If it's already a dict-like mapping, convert keys to strings
+            if isinstance(enchants, dict):
+                out = {}
+                for k, v in enchants.items():
+                    if isinstance(k, (str, int, float, bool)) or k is None:
+                        key = str(k)
+                    else:
+                        # Try to pull a name attribute, fallback to str()
+                        key = getattr(k, 'name', None) or getattr(k, 'key', None) or str(k)
+                    out[key] = v
+                return json.dumps(out)
+
+            # Fallback: stringify the whole structure
+            return json.dumps(str(enchants))
+        except Exception:
+            return json.dumps({})
 
     def create_table(self, table_name: str, columns: Dict[str, str], unique: list = None):
         column_definitions = ', '.join([f"{col} {dtype}" for col, dtype in columns.items()])
@@ -392,12 +404,6 @@ class ServerDB(DatabaseManager):
         }
         self.create_table('name_bans', name_ban_columns)
 
-        jails_columns = {
-            'name': 'TEXT UNIQUE NOT NULL',
-            'pos': 'TEXT'
-        }
-        self.create_table('jails', jails_columns)
-
         warps_columns = {
             'name': 'TEXT UNIQUE NOT NULL',
             'pos': 'TEXT',
@@ -453,7 +459,6 @@ class ServerDB(DatabaseManager):
 
         self.migrate_table("server_info", ServerData) 
         self.migrate_table("name_bans", NameBans) 
-        self.migrate_table("jails", Jails)
         self.migrate_table("warps", Warps)
         self.migrate_table("homes", Homes)       
         self.migrate_table("spawns", Spawn)       
@@ -601,45 +606,6 @@ class ServerDB(DatabaseManager):
 
         return all_bans
 
-    def create_jail(self, name: str, location: Location) -> bool:
-        # Check if jail name exists
-        if self.execute("SELECT 1 FROM jails WHERE name = ?", (name,)).fetchone():
-            return False
-
-        pos_str = self.encode_location(location)
-        self.execute(
-            "INSERT INTO jails (name, pos) VALUES (?, ?)",
-            (name, pos_str)
-        )
-        self.conn.commit()
-        return True
-    
-    def get_all_jails(self, server) -> dict[str, dict]:
-        jails = {}
-        rows = self.execute("SELECT name, pos FROM jails").fetchall()
-        for name, pos_str in rows:
-            pos = self.decode_location(pos_str, server) if pos_str else None
-            jails[name] = {
-                'pos': pos
-            }
-        return jails
-
-    def get_jail(self, name: str, server) -> dict | None:
-        row = self.execute("SELECT name, pos FROM jails WHERE name = ?", (name,)).fetchone()
-        if row is None:
-            return None
-        name, pos_str = row
-        pos = self.decode_location(pos_str, server) if pos_str else None
-        return {
-            "name": name,
-            "pos": pos
-        }
-
-    def delete_jail(self, name: str) -> bool:
-        cur = self.execute("DELETE FROM jails WHERE name = ?", (name,))
-        self.conn.commit()
-        return cur.rowcount > 0
-    
     def encode_aliases(self, aliases: list[str]) -> str:
         return json.dumps(aliases)
 
@@ -1089,7 +1055,6 @@ class UserDB(DatabaseManager):
     def __init__(self, db_name: str):
         """Initialize the database connection and create tables."""
         super().__init__(db_name)
-        self.jailed_cache = {}
         self.db_name = db_name
         self._cache = {}
         self._name_to_xuid_cache = {}
@@ -1117,11 +1082,10 @@ class UserDB(DatabaseManager):
             'is_silent_muted': 'INTEGER',
             'is_afk': 'INTEGER',
             'enabled_ss': 'INTEGER',
-            'is_vanish': 'INTEGER',
             'last_messaged': 'TEXT',
             'last_logout_pos': 'TEXT',
             'last_logout_dim': 'TEXT',
-            'last_vanish_blob': 'BLOB',
+            
             'unique_id': 'INTEGER',
             'enabled_mt': 'INTEGER',
             'enabled_as': 'INTEGER',
@@ -1144,13 +1108,7 @@ class UserDB(DatabaseManager):
             'ip_address': 'TEXT',
             'is_ip_banned': 'INTEGER',
             'is_ip_muted': 'INTEGER',
-            'is_jailed': 'INTEGER',
-            'jail_time': 'INTEGER',
-            'jail_reason': 'TEXT',
-            'jail': 'TEXT',
-            'jail_gamemode': 'INTEGER',
-            'return_jail_pos': 'TEXT',
-            'return_jail_dim': 'TEXT'
+            
         }
         self.create_table('mod_logs', moderation_log_columns)
 
@@ -1241,13 +1199,13 @@ class UserDB(DatabaseManager):
                 'xuid': xuid, 'uuid': uuid, 'name': name, 'ping': ping, 'device_os': device_os, 'device_id': device_id,
                 'client_ver': client_ver, 'last_join': last_join, 'last_leave': last_leave, 
                 'internal_rank': internal_rank, 'enabled_ms': 1, 'is_afk': 0, 'enabled_ss': 0,
-                'is_vanish': 0, 'last_logout_dim': "Overworld", 'last_vanish_blob': None, 'unique_id': unique_id,
+                    'last_logout_dim': "Overworld", 'unique_id': unique_id,
                 'enabled_as': 0, 'enabled_sc': 0, 'enabled_mt': 1, 'gamemode': gamemode
             }
             mod_data = {
                 'xuid': xuid, 'name': name, 'is_muted': 0, 'mute_time': 0, 'mute_reason': "None",
                 'is_banned': 0, 'banned_time': 0, 'ban_reason': "None", 'ip_address': ip, 'is_ip_banned': 0,
-                'is_ip_muted': 0, 'is_jailed': 0, 'jail_time': 0, 'jail_reason': "None", 'jail': 'None'
+                    'is_ip_muted': 0
             }
             self.insert('users', data)
             self.insert('mod_logs', mod_data)
@@ -1549,15 +1507,13 @@ class UserDB(DatabaseManager):
                 INSERT INTO mod_logs (
                     xuid, name, is_muted, mute_time, mute_reason,
                     is_banned, banned_time, ban_reason,
-                    ip_address, is_ip_banned, is_ip_muted,
-                    is_jailed, jail_time, jail_reason, jail
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ip_address, is_ip_banned, is_ip_muted
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     None, None, 0, 0, "None",
                     1, expiration, reason,
-                    ip, 1, 0,
-                    0, 0, "None", "None"
+                    ip, 1, 0
                 )
             )
 
@@ -1759,128 +1715,6 @@ class UserDB(DatabaseManager):
         })
         self.invalidate_user_cache(xuid)
 
-    def refresh_jail_cache(self):
-        """Load all currently jailed players into the cache."""
-        current_time = int(time.time())
-        rows = self.db.execute(
-            "SELECT xuid, jail_time FROM mod_logs WHERE is_jailed = 1 AND jail_time > ?",
-            (current_time,), readonly=True
-        ).fetchall()
-
-        self.jailed_cache = {xuid: jail_time for xuid, jail_time in rows}
-
-    def add_jail(self, xuid: str, expiration: int, reason: str, jail: str = None, jail_gamemode: str = None, jail_pos: Vector = None, jail_dim: str = None):
-        """Jail a player, optionally storing the return position and dimension."""
-        update_data = {
-            'is_jailed': 1,
-            'jail_time': expiration,
-            'jail_reason': reason
-        }
-
-        if jail_gamemode:
-            update_data['jail_gamemode'] = jail_gamemode
-
-        if jail:
-            update_data['jail'] = jail
-
-        if jail_pos is not None:
-            if isinstance(jail_pos, Vector):
-                x, y, z = jail_pos.x, jail_pos.y, jail_pos.z
-                update_data['return_jail_pos'] = f"{x},{y},{z}"
-            else:
-                update_data['return_jail_pos'] = str(jail_pos)
-
-        if jail_dim:
-            update_data['return_jail_dim'] = jail_dim
-
-        self.update('mod_logs', update_data, 'xuid = ?', (xuid,))
-        self.insert(
-            'punishment_logs',
-            {
-                'xuid': xuid,
-                'name': self.get_name_by_xuid(xuid),
-                'action_type': 'Jail',
-                'reason': reason,
-                'timestamp': int(time.time()),
-                'duration': expiration
-            }
-        )
-        self.invalidate_user_cache(xuid)
-
-    def remove_jail(self, name: str):
-        """Unjail a player and log the action."""
-        xuid = self.get_xuid_by_name(name)
-        self.update(
-            'mod_logs',
-            {
-                'is_jailed': 0,
-                'jail_time': 0,
-                'jail_reason': "None",
-                'jail_gamemode': "None",
-                'return_jail_pos': None,
-                'return_jail_dim': None
-            },
-            'name = ?',
-            (name,)
-        )
-        self.insert(
-            'punishment_logs',
-            {
-                'xuid': xuid,
-                'name': name,
-                'action_type': 'Unjail',
-                'reason': 'Jail Removed',
-                'timestamp': int(time.time()),
-                'duration': 0
-            }
-        )
-
-        self.invalidate_user_cache(xuid)
-
-    def force_unjail(self, xuid: str):
-        self.execute(
-            "UPDATE mod_logs SET jail_time = ?, is_jailed = 1 WHERE xuid = ?",
-            (int(time.time()) - 1, xuid)
-        )
-
-        # Also invalidate the cache for immediate effect
-        if xuid in self.jailed_cache:
-            self.jailed_cache[xuid] = int(time.time()) - 1
-            self.invalidate_user_cache(xuid)
-
-    def check_jailed(self, xuid: str) -> tuple[bool, bool]:
-        """
-        Check if a player is jailed.
-        Returns:
-            (is_jailed, is_expired)
-            - is_jailed: True if the DB or cache indicates the player was jailed.
-            - is_expired: True if the jail_time has passed.
-        """
-        current_time = int(time.time())
-
-        # Clean up expired cache entries
-        expired = [k for k, t in self.jailed_cache.items() if t <= current_time]
-        for k in expired:
-            self.jailed_cache.pop(k, None)
-
-        # Check cached jail time
-        if xuid in self.jailed_cache:
-            jail_time = self.jailed_cache[xuid]
-            return True, jail_time <= current_time
-
-        # Query DB for jail info
-        row = self.execute(
-            "SELECT jail_time FROM mod_logs WHERE xuid = ? AND is_jailed = 1 LIMIT 1",
-            (xuid,), readonly=True
-        ).fetchone()
-
-        if row:
-            jail_time = row[0]
-            self.jailed_cache[xuid] = jail_time
-            return True, jail_time <= current_time
-
-        return False, False
-    
     def print_punishment_history(self, name: str, page: int = 1):
         """Prints punishment history for a named player"""
 
@@ -1893,15 +1727,9 @@ class UserDB(DatabaseManager):
         if not mod_log:
             return False
 
-        # Unpack known fields and capture optional jail fields in a tuple
+        # Unpack known fields
         (is_muted, mute_time, mute_reason,
-        is_banned, banned_time, ban_reason, is_ip_banned, *jail_fields) = mod_log
-
-        # Handle optional jail fields safely
-        if len(jail_fields) == 3:
-            is_jailed, jail_time, jail_reason = jail_fields
-        else:
-            is_jailed = jail_time = jail_reason = None
+        is_banned, banned_time, ban_reason, is_ip_banned) = mod_log
             
         current_time = int(time.time())
 
@@ -1939,14 +1767,7 @@ class UserDB(DatabaseManager):
                     f"§7(§e{mute_expires_in}§7)\n"
                     f"§oDate Issued: §7{formatted_time}§r"
                 )
-            elif action_type == "Jail" and is_jailed and jail_time > current_time and "Jail" not in active_punishments:
-                jail_expires_in = format_time_remaining(jail_time)
-                active_punishments["Jail"] = (
-                    timestamp,
-                    f"§vJail §7- §e{jail_reason} "
-                    f"§7(§e{jail_expires_in}§7)\n"
-                    f"§oDate Issued: §7{formatted_time}§r"
-                )
+            
             else:
                 past_punishments.append(
                     f"§9{action_type} §7- §e{reason} "
@@ -2217,7 +2038,7 @@ class UserDB(DatabaseManager):
                     getattr(item, "amount", 1),
                     getattr(meta, "damage", 0),
                     getattr(meta, "display_name", ""),
-                    json.dumps(getattr(meta, "enchants", {})),
+                    self._serialize_enchants(getattr(meta, "enchants", {})),
                     json.dumps(getattr(meta, "lore", [])),
                     getattr(meta, "is_unbreakable", False),
                     getattr(item, "data", None)
@@ -2240,7 +2061,7 @@ class UserDB(DatabaseManager):
                     getattr(item, "amount", 1),
                     getattr(meta, "damage", 0),
                     getattr(meta, "display_name", ""),
-                    json.dumps(getattr(meta, "enchants", {})),
+                    self._serialize_enchants(getattr(meta, "enchants", {})),
                     json.dumps(getattr(meta, "lore", [])),
                     getattr(meta, "is_unbreakable", False),
                     getattr(item, "data", None)
@@ -2327,7 +2148,7 @@ class UserDB(DatabaseManager):
                     item.amount or 1,
                     meta.damage,
                     meta.display_name,
-                    json.dumps(meta.enchants),
+                    self._serialize_enchants(getattr(meta, "enchants", {})),
                     json.dumps(meta.lore),
                     meta.is_unbreakable,
                     item.data

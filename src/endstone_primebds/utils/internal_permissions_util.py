@@ -99,7 +99,6 @@ EXTRA_PERMS = [
     "primebds.exempt.ban",
     "primebds.exempt.kick",
     "primebds.exempt.warn",
-    "primebds.exempt.jail",
     "primebds.exempt.homes",
     "primebds.exempt.homes.other",
     "primebds.exempt.home.delays",

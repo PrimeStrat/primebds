@@ -6,7 +6,7 @@ from endstone.util import Vector
 from endstone.event import PlayerLoginEvent, PlayerJoinEvent, PlayerQuitEvent, PlayerKickEvent
 from typing import TYPE_CHECKING
 from datetime import datetime
-from endstone_primebds.handlers.intervals import start_jail_check_if_needed, stop_jail_check_if_not_needed
+
 from endstone_primebds.utils.config_util import load_config
 from endstone_primebds.utils.mod_util import format_time_remaining, ban_message
 from endstone_primebds.utils.logging_util import log, discordRelay
@@ -88,13 +88,8 @@ def handle_join_event(self: "PrimeBDS", ev: PlayerJoinEvent):
     self.db.update_user_data(ev.player.name, 'last_join', int(time.time()))
     self.db.check_alts(ev.player.xuid, ev.player.name, str(ev.player.address), ev.player.device_id)
     self.server.scheduler.run_task(self, self.reload_custom_perms(ev.player), 1)
-    start_jail_check_if_needed(self)
 
     user = self.db.get_online_user(ev.player.xuid)
-    if user:
-        self.vanish_state[ev.player.unique_id] = bool(user.is_vanish)
-    else:
-        self.vanish_state[ev.player.unique_id] = False
 
     # Ban System: ENHANCEMENT
     mod_log = self.db.get_mod_log(ev.player.xuid)
@@ -112,10 +107,6 @@ def handle_join_event(self: "PrimeBDS", ev: PlayerJoinEvent):
             # Handle Activity
             self.sldb.start_session(ev.player.xuid, ev.player.name, int(time.time()))
 
-    # Hide Vanish
-    if self.db.get_online_user(ev.player.xuid).is_vanish:
-        ev.join_message = ""
-
     warning = self.db.get_latest_active_warning(ev.player.xuid, ev.player.name)
     if warning:
         reason = warning.get("warn_reason", "Negative Behavior")
@@ -127,7 +118,6 @@ def handle_join_event(self: "PrimeBDS", ev: PlayerJoinEvent):
         ev.player.name_tag = prefix+ev.player.name+suffix
 
     discordRelay(f"**{ev.player.name}** has joined the server ***({len(self.server.online_players)}/{self.server.max_players})***", "connections")
-    check_unset_scoreboards(self)
     return
 
 def handle_leave_event(self: "PrimeBDS", ev: PlayerQuitEvent):
@@ -145,7 +135,6 @@ def handle_leave_event(self: "PrimeBDS", ev: PlayerQuitEvent):
     self.db.update_user_data(ev.player.name, "is_afk", 0)
     self.db.save_inventory(ev.player)
     self.db.save_enderchest(ev.player)
-    stop_jail_check_if_not_needed(self)
 
     if ev.player.unique_id in self.vanish_state:
         del self.vanish_state[ev.player.unique_id]
@@ -153,16 +142,6 @@ def handle_leave_event(self: "PrimeBDS", ev: PlayerQuitEvent):
     # Ban System: ENHANCEMENT
     mod_log = self.db.get_mod_log(ev.player.xuid)
     if mod_log:
-        if mod_log.is_jailed:
-            air = ItemStack("minecraft:air", 1)
-            ev.player.inventory.helmet = air
-            ev.player.inventory.chestplate = air
-            ev.player.inventory.leggings = air
-            ev.player.inventory.boots = air
-            ev.player.inventory.item_in_off_hand = air
-            jail = self.serverdb.get_jail(mod_log.jail, self.server)
-            ev.player.inventory.clear()
-            ev.player.teleport(jail["pos"])
         if mod_log.is_banned:
             ev.quit_message = ""  # Remove join message
         else:
@@ -175,113 +154,8 @@ def handle_leave_event(self: "PrimeBDS", ev: PlayerQuitEvent):
             self.db.update_user_data(ev.player.name, 'last_logout_pos', rounded_coords)
             self.db.update_user_data(ev.player.name, 'last_logout_dim', ev.player.dimension.name)
 
-    online_user = self.db.get_online_user(ev.player.xuid)
-    if online_user and getattr(online_user, "is_vanish", False):
-        ev.quit_message = ""
-
     discordRelay(f"**{ev.player.name}** has left the server ***({len(self.server.online_players)-1}/{self.server.max_players})***", "connections")
     return
 
 def handle_kick_event(self: "PrimeBDS", ev: PlayerKickEvent):
     self.sldb.end_session(ev.player.xuid, int(time.time()))
-
-def check_unset_scoreboards(self):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    while not (
-        os.path.exists(os.path.join(current_dir, 'plugins')) and
-        os.path.exists(os.path.join(current_dir, 'worlds'))
-    ):
-        current_dir = os.path.dirname(current_dir)
-
-    scoreboard_data_folder = os.path.join(current_dir, 'plugins/primebds_data', 'scoreboard_data')
-    if not os.path.exists(scoreboard_data_folder):
-        return  # Folder doesn't exist, nothing to check
-
-    # Check if all scoreboard files are fully loaded
-    all_fully_loaded = True
-    for filename in os.listdir(scoreboard_data_folder):
-        if filename.endswith(".json"):
-            full_path = os.path.join(scoreboard_data_folder, filename)
-            with open(full_path, 'r') as f:
-                data = json.load(f)
-            # If any objective in this file is not fully loaded, we continue processing
-            for obj_data in data.values():
-                if not obj_data.get("is_fully_loaded", False):
-                    all_fully_loaded = False
-                    break
-            if not all_fully_loaded:
-                break
-
-    if all_fully_loaded:
-        return
-
-    # Map online players by xuid for quick lookup
-    online_players_by_xuid = {player.xuid: player for player in self.server.online_players}
-
-    for filename in os.listdir(scoreboard_data_folder):
-        if not filename.endswith('.json'):
-            continue
-
-        full_path = os.path.join(scoreboard_data_folder, filename)
-        try:
-            with open(full_path, 'r') as f:
-                data = json.load(f)
-        except Exception as e:
-            print(f"Could not read scoreboard file {filename}: {e}")
-            continue
-
-        file_modified = False
-
-        for obj_name, obj_data in data.items():
-            if not isinstance(obj_data, dict):
-                continue
-
-            entries = obj_data.get("entries", {})
-            if not isinstance(entries, dict):
-                continue
-
-            all_loaded = True
-            objective = self.server.scoreboard.get_objective(obj_name)
-            if not objective:
-                # If objective not present, add it with DUMMY criteria
-                from endstone.scoreboard import Criteria
-                criteria = Criteria.DUMMY
-                display_name = obj_data.get("display_name", obj_name)
-                objective = self.server.scoreboard.add_objective(obj_name, criteria, display_name)
-
-            # Iterate all entries
-            for entry_key, entry_data in entries.items():
-                loaded = entry_data.get("loaded", False)
-                if loaded:
-                    continue
-
-                if entry_key.isdigit() and len(entry_key) >= 12:
-                    player = online_players_by_xuid.get(entry_key)
-                    if player:
-                        score_obj = objective.get_score(player)
-                        score_obj.value = entry_data.get("value", 0)
-                        entry_data["loaded"] = True
-                        file_modified = True
-                    else:
-                        all_loaded = False
-                else:
-                    # Non XUID entries should already be loaded immediately
-                    # Mark loaded True to avoid repeated checks
-                    entry_data["loaded"] = True
-                    file_modified = True
-
-            # Update is_fully_loaded based on whether all entries are loaded
-            if all_loaded and obj_data.get("is_fully_loaded") != True:
-                obj_data["is_fully_loaded"] = True
-                file_modified = True
-            elif not all_loaded and obj_data.get("is_fully_loaded") != False:
-                obj_data["is_fully_loaded"] = False
-                file_modified = True
-
-        if file_modified:
-            try:
-                with open(full_path, 'w') as f:
-                    json.dump(data, f, indent=4)
-                print(f"[PrimeBDS] Updated scoreboard file '{filename}' after loading missing entries.")
-            except Exception as e:
-                print(f"[PrimeBDS] Could not save updated scoreboard file {filename}: {e}")
