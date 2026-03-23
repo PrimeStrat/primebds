@@ -70,7 +70,6 @@ class PrimeBDS(Plugin):
         self.gamerules = {}
         self.cached_players = set()
         self.vanish_state = {}
-        self.jail_cache = {}
         self.afk_cache = {}
         self.packet_last_sample = {
             "time": time.time(),

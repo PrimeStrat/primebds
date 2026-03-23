@@ -24,7 +24,5 @@ def handle_death_event(self: "PrimeBDS", ev: PlayerDeathEvent):
     return
 
 def handle_interact_event(self: "PrimeBDS", ev: PlayerInteractActorEvent):
-    if self.db.get_mod_log(ev.player.xuid).is_jailed:
-        ev.is_cancelled = True
-    elif not self.gamerules.get("can_interact", 1):
+    if not self.gamerules.get("can_interact", 1):
         ev.is_cancelled = True

@@ -120,19 +120,13 @@ def stop_intervals(self: "PrimeBDS"):
 
 def recheck_all_intervals(self: "PrimeBDS"):
     """
-    Re-evaluate whether AFK and Jail intervals should be running.
+    Re-evaluate whether AFK
     Call this after config reloads or any mid-game setting changes.
     """
     config = load_config()
 
-    any_jailed = any(self.db.check_jailed(p.xuid)[0] for p in self.server.online_players)
-
-    if any_jailed:
-        if not getattr(self.interval_manager, "_task_id", None):
-            self.interval_manager.start()
-    else:
-        if getattr(self.interval_manager, "_task_id", None):
-            self.interval_manager.stop()
+    if getattr(self.interval_manager, "_task_id", None):
+        self.interval_manager.stop()
 
     auto_detect = config["modules"]["afk"]["constantly_check_afk_status"]
     any_afk = self.db.execute("SELECT 1 FROM users WHERE is_afk = 1 LIMIT 1").fetchone() is not None

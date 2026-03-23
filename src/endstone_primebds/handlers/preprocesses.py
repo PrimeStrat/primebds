@@ -81,7 +81,6 @@ def handle_command_preprocess(self: "PrimeBDS", event: PlayerCommandEvent):
         target = self.db.get_offline_user(args[1])
         if target:
             if (
-                (cmd == "jail" and perms_util.check_perms(self, target, "primebds.exempt.jail")) or
                 (cmd == "warn" and perms_util.check_perms(self, target, "primebds.exempt.warn")) or
                 (cmd == "kick" and perms_util.check_perms(self, target, "primebds.exempt.kick")) or
                 (cmd in {"mute", "tempmute"} and perms_util.check_perms(self, target, "primebds.exempt.mute")) or
