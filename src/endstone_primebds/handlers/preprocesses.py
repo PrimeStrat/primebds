@@ -1,4 +1,5 @@
 import shlex
+from endstone import ColorFormat
 from endstone.event import PlayerCommandEvent, ServerCommandEvent
 from typing import TYPE_CHECKING
 
@@ -34,10 +35,7 @@ def handle_command_preprocess(self: "PrimeBDS", event: PlayerCommandEvent):
     try:
         args = shlex.split(command)
     except ValueError as e:
-        player.send_message(f"§cInvalid command syntax: {e}")
-        return True 
-    except IndexError:
-        player.send_message("§cInvalid command format")
+        player.send_message(f"{ColorFormat.RED}Invalid command syntax: {e}")
         return True
     
     config = load_config()
@@ -72,7 +70,7 @@ def handle_command_preprocess(self: "PrimeBDS", event: PlayerCommandEvent):
                     f"tempban {player.name} 7 day Crasher Exploit"
                 )
             else:
-                log(self, f"§6Player §e{player.name} §6was kicked due to §eCrasher Exploit", "mod")
+                log(self, f"{ColorFormat.GOLD}Player {ColorFormat.YELLOW}{player.name} {ColorFormat.GOLD}was kicked due to {ColorFormat.YELLOW}Crasher Exploit", "mod")
                 player.kick("Disconnected")
         return False
 
@@ -86,7 +84,7 @@ def handle_command_preprocess(self: "PrimeBDS", event: PlayerCommandEvent):
                 (cmd in {"mute", "tempmute"} and perms_util.check_perms(self, target, "primebds.exempt.mute")) or
                 (cmd in {"permban", "tempban", "ipban", "ban", "ban-ip"} and perms_util.check_perms(self, target, "primebds.exempt.ban"))
             ):
-                player.send_message(f"§6Player §e{target.name} §6is exempt from §e{cmd}")
+                player.send_message(f"{ColorFormat.GOLD}Player {ColorFormat.YELLOW}{target.name} {ColorFormat.GOLD}is exempt from {ColorFormat.YELLOW}{cmd}")
                 is_exempt = True
     if is_exempt:
         event.is_cancelled = True
@@ -108,12 +106,12 @@ def handle_command_preprocess(self: "PrimeBDS", event: PlayerCommandEvent):
             target = self.db.get_online_user(pl.xuid)
 
             if perms_util.check_perms(self, target, "primebds.exempt.kick"):
-                player.send_message(f"§6Player §e{target.name} §6is exempt from §e{cmd}")
+                player.send_message(f"{ColorFormat.GOLD}Player {ColorFormat.YELLOW}{target.name} {ColorFormat.GOLD}is exempt from {ColorFormat.YELLOW}{cmd}")
                 continue
 
             try:
                 pl.kick(reason)
-                player.send_message(f"§6Player §e{target.name} §6was kicked for §e\"{reason}\"")
+                player.send_message(f"{ColorFormat.GOLD}Player {ColorFormat.YELLOW}{target.name} {ColorFormat.GOLD}was kicked for {ColorFormat.YELLOW}\"{reason}\"")
             except Exception as e:
                 player.send_error_message(f"Failed to kick {target.name}: {e}")
 
@@ -186,7 +184,7 @@ def handle_command_preprocess(self: "PrimeBDS", event: PlayerCommandEvent):
                 return True
         target = args[1]
         if "@" in target:
-            player.send_message("§cTarget selectors are invalid for this command")
+            player.send_message(f"{ColorFormat.RED}Target selectors are invalid for this command")
             event.is_cancelled = True
             return True
         
@@ -197,7 +195,7 @@ def handle_command_preprocess(self: "PrimeBDS", event: PlayerCommandEvent):
         target_user = self.db.get_offline_user(target)
         if target_user is not None:
             if target_user.enabled_mt == 0 and not player.has_permission("primebds.exempt.msgtoggle"):
-                player.send_message("§cThis player has private messages disabled")
+                player.send_message(f"{ColorFormat.RED}This player has private messages disabled")
                 event.is_cancelled = True
                 return True
 
@@ -206,15 +204,19 @@ def handle_command_preprocess(self: "PrimeBDS", event: PlayerCommandEvent):
 
         if config["modules"]["server_messages"]["enhanced_whispers"]:
             online_target = self.server.get_player(target)
-            player.send_message(f"{config['modules']['server_messages']['whisper_prefix']}§7To {online_target.name}: §o{message}")
-            online_target.send_message(f"{config['modules']['server_messages']['whisper_prefix']}§7From {player.name}: §o{message}")
+            if online_target is None:
+                player.send_message(f"{ColorFormat.RED}Player '{target}' is not online")
+                event.is_cancelled = True
+                return True
+            player.send_message(f"{config['modules']['server_messages']['whisper_prefix']}{ColorFormat.GRAY}To {online_target.name}: {ColorFormat.ITALIC}{message}")
+            online_target.send_message(f"{config['modules']['server_messages']['whisper_prefix']}{ColorFormat.GRAY}From {player.name}: {ColorFormat.ITALIC}{message}")
             event.is_cancelled = True
 
         for pl in self.server.online_players:  
             user = self.db.get_online_user(pl.xuid)
             if user:
                 if user.enabled_ss == 1 and pl.has_permission("primebds.command.socialspy"):
-                    pl.send_message(f"{config['modules']['server_messages']['social_spy_prefix']}§8[§r{player.name} §7-> §r{target}§8] §7{message}")
+                    pl.send_message(f"{config['modules']['server_messages']['social_spy_prefix']}{ColorFormat.DARK_GRAY}[{ColorFormat.RESET}{player.name} {ColorFormat.GRAY}-> {ColorFormat.RESET}{target}{ColorFormat.DARK_GRAY}] {ColorFormat.GRAY}{message}")
 
 def handle_server_command_preprocess(self: "PrimeBDS", event: ServerCommandEvent):
     args = event.command.split()

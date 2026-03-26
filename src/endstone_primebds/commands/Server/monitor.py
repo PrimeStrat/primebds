@@ -4,13 +4,6 @@ from endstone.command import CommandSender
 from endstone_primebds.utils.command_util import create_command
 from typing import TYPE_CHECKING
 
-try:
-    from bedrock_protocol.packets import MinecraftPacketIds
-    PACKET_SUPPORT = True
-except Exception as e:
-    print(e)
-    PACKET_SUPPORT = False
-
 if TYPE_CHECKING:
     from endstone_primebds.primebds import PrimeBDS
 
@@ -18,7 +11,7 @@ if TYPE_CHECKING:
 command, permission = create_command(
     "monitor",
     "Monitor server performance in real time!",
-    ["/monitor (server|packets|disable)[debug: debug]"],
+    ["/monitor (server|disable)[debug: debug]"],
     ["primebds.command.monitor"]
 )
 
@@ -45,19 +38,10 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
                     "time": time.time(),
                     "counts": {}
                 }
-            sender.send_message("§cMonitoring turned off")
+            sender.send_message(f"{ColorFormat.RED}Monitoring turned off")
             return True
 
-        sender.send_message("§ePrevious monitoring canceled, applying new settings...")
-
-    if mode == "packets" and not PACKET_SUPPORT:
-        return False
-    else:
-       PACKET_ID_TO_NAME = {
-            v: k
-            for k, v in MinecraftPacketIds.__dict__.items()
-            if not k.startswith("__") and isinstance(v, int)
-        }
+        sender.send_message(f"{ColorFormat.YELLOW}Previous monitoring canceled, applying new settings...")
 
     def monitor_interval(player_name, mode=mode):
         player = self.server.get_player(player_name)
@@ -91,64 +75,26 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
             entity_color = ColorFormat.GREEN if entity_count < 600 else ColorFormat.YELLOW if entity_count <= 800 else ColorFormat.RED
             dim_color = {"Overworld": ColorFormat.GREEN, "Nether": ColorFormat.RED, "TheEnd": ColorFormat.MATERIAL_IRON}.get(player.dimension.name, ColorFormat.GRAY)
 
-            tps_str = f"{tps_color}{tps_display}.{tps_fraction:1d} §o§7({tick_usage:.1f})"
+            tps_str = f"{tps_color}{tps_display}.{tps_fraction:1d} {ColorFormat.ITALIC}{ColorFormat.GRAY}({tick_usage:.1f})"
             ping_str = f"{ping_color}{player.ping}ms"
-            mspt_str = f"{mspt_color}{mspt:.1f}ms §o§7(avg) §r§7| {mspt_cur_color}{mspt_cur:.1f}ms §o§7(cur)"
+            mspt_str = f"{mspt_color}{mspt:.1f}ms {ColorFormat.ITALIC}{ColorFormat.GRAY}(avg) {ColorFormat.RESET}{ColorFormat.GRAY}| {mspt_cur_color}{mspt_cur:.1f}ms {ColorFormat.ITALIC}{ColorFormat.GRAY}(cur)"
             entity_str = f"{entity_color}{entity_count}"
-            version_str = f"§a{server_version}"
-            chunk_str = f"§a{overworld_chunks} §7| §c{nether_chunks} §7| {ColorFormat.MATERIAL_IRON}{the_end_chunks}"
+            version_str = f"{ColorFormat.GREEN}{server_version}"
+            chunk_str = f"{ColorFormat.GREEN}{overworld_chunks} {ColorFormat.GRAY}| {ColorFormat.RED}{nether_chunks} {ColorFormat.GRAY}| {ColorFormat.MATERIAL_IRON}{the_end_chunks}"
             your_dim = f"{dim_color}{player.dimension.name}"
 
             player.send_tip(
-                f"§bServer Monitor§r\n"
-                f"§r---------------------------\n"
-                f"§rLevel: {self.server.level.name} §o§7(ver. {version_str}§7)\n"
-                f"§rTPS: {tps_str} §r\n"
-                f"§rMSPT: {mspt_str}\n"
-                f"§rLoaded Chunks: {chunk_str}\n"
-                f"§rLoaded Entities: {entity_str}\n"
-                f"§r---------------------------\n"
-                f"§rYour Ping: {ping_str}\n"
-                f"§rCurrent DIM: {your_dim}"
+                f"{ColorFormat.AQUA}Server Monitor{ColorFormat.RESET}\n"
+                f"{ColorFormat.RESET}---------------------------\n"
+                f"{ColorFormat.RESET}Level: {self.server.level.name} {ColorFormat.ITALIC}{ColorFormat.GRAY}(ver. {version_str}{ColorFormat.GRAY})\n"
+                f"{ColorFormat.RESET}TPS: {tps_str} {ColorFormat.RESET}\n"
+                f"{ColorFormat.RESET}MSPT: {mspt_str}\n"
+                f"{ColorFormat.RESET}Loaded Chunks: {chunk_str}\n"
+                f"{ColorFormat.RESET}Loaded Entities: {entity_str}\n"
+                f"{ColorFormat.RESET}---------------------------\n"
+                f"{ColorFormat.RESET}Your Ping: {ping_str}\n"
+                f"{ColorFormat.RESET}Current DIM: {your_dim}"
             )
-
-        elif mode == "packets":
-            now = time.time()
-            elapsed = now - self.packet_last_sample["time"]
-            if elapsed <= 0:
-                elapsed = 1
-
-            lines = []
-            for pid, count in self.packets_sent_count.items():
-                prev = self.packet_last_sample["counts"].get(pid, 0)
-                diff = count - prev
-                pps = diff / elapsed
-
-                if pps > 0: 
-                    name = PACKET_ID_TO_NAME.get(pid, "Unknown")
-                    lines.append(f"§r{name} §7({pid}): §a{pps:.1f} §7P/S")
-
-            # Sort by P/S and limit to 10
-            lines.sort(key=lambda l: float(l.split("§a")[1].split()[0]), reverse=True)
-            lines = lines[:10]
-
-            # Always show 10 lines (fill with blanks if fewer)
-            while len(lines) < 10:
-                lines.append(" ")
-
-            player.send_tip(
-                f"§bPacket Monitor§r\n"
-                f"§r-------------------\n"
-                f"{chr(10).join(lines)}\n"
-                f"§r-------------------"
-            )
-
-            # Reset counters
-            self.packet_last_sample = {
-                "time": time.time(),
-                "counts": {}
-            }
-            self.packets_sent_count.clear()
 
     task = self.server.scheduler.run_task(
         self,
@@ -159,7 +105,7 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
 
     if task:
         self.monitor_intervals[player_name] = task.task_id
-        sender.send_message(f"§aMonitoring turned on with {interval:.1f}s interval ({mode} mode)")
+        sender.send_message(f"{ColorFormat.GREEN}Monitoring turned on with {interval:.1f}s interval ({mode} mode)")
     else:
         sender.send_error_message("Failed to start monitoring task.")
 

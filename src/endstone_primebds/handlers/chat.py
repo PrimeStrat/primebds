@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 from time import time
 
+from endstone import ColorFormat
 from endstone.event import PlayerChatEvent
 import endstone_primebds.utils.internal_permissions_util as perms_util
 from endstone_primebds.utils.config_util import load_config
@@ -14,24 +15,26 @@ def handle_chat_event(self: "PrimeBDS", ev: PlayerChatEvent):
     user_muted = self.db.check_and_update_mute(ev.player.xuid, ev.player.name)
     ip_muted, ip_mute_time, ip_mute_reason = self.db.check_ip_mute(str(ev.player.address))
     if self.globalmute == 1 and not ev.player.has_permission("primebds.globalmute.exempt"):
-        ev.player.send_message(f"§cGlobal chat is currently muted by an admin")
+        ev.player.send_message(f"{ColorFormat.RED}Global chat is currently muted by an admin")
         ev.is_cancelled = True
         return False
     elif ev.player.xuid in self.silentmutes:
         ev.is_cancelled = True
-        ev.player.send_message(f"§cYour chats are currently disabled")
+        ev.player.send_message(f"{ColorFormat.RED}Your chats are currently disabled")
         return False
 
     if user_muted or ip_muted:
         if user_muted:
             user_mod = self.db.get_mod_log(ev.player.xuid)
-            ev.player.send_message(f"""§6You are currently muted.
-§6Expires: §e{format_time_remaining(user_mod.mute_time)}
-§6Reason: §e{user_mod.mute_reason}""")
+            ev.player.send_message(
+                f"{ColorFormat.GOLD}You are currently muted.\n"
+                f"{ColorFormat.GOLD}Expires: {ColorFormat.YELLOW}{format_time_remaining(user_mod.mute_time)}\n"
+                f"{ColorFormat.GOLD}Reason: {ColorFormat.YELLOW}{user_mod.mute_reason}")
         else:
-            ev.player.send_message(f"""§6You are currently muted.
-§6Expires: §e{format_time_remaining(ip_mute_time)}
-§6Reason: §e{ip_mute_reason}""")
+            ev.player.send_message(
+                f"{ColorFormat.GOLD}You are currently muted.\n"
+                f"{ColorFormat.GOLD}Expires: {ColorFormat.YELLOW}{format_time_remaining(ip_mute_time)}\n"
+                f"{ColorFormat.GOLD}Reason: {ColorFormat.YELLOW}{ip_mute_reason}")
         ev.is_cancelled = True
         return False
     
@@ -40,7 +43,7 @@ def handle_chat_event(self: "PrimeBDS", ev: PlayerChatEvent):
 
     if user.enabled_sc:
         safe_message = ev.message.replace("{", "{{").replace("}", "}}")
-        message = f"{config['modules']['server_messages']['staff_chat_prefix']}§e{ev.player.name}§7: §6{safe_message}"
+        message = f"{config['modules']['server_messages']['staff_chat_prefix']}{ColorFormat.YELLOW}{ev.player.name}{ColorFormat.GRAY}: {ColorFormat.GOLD}{safe_message}"
         self.server.broadcast(message, "primebds.command.staffchat")
         ev.is_cancelled = True
         return False
@@ -56,7 +59,7 @@ def handle_chat_event(self: "PrimeBDS", ev: PlayerChatEvent):
     if time_since_last >= chat_cooldown:
         self.chat_cooldown[ev.player.id] = current_time
     else:
-        ev.player.send_message(f"§cYou must wait {time_remaining:.2f}s before chatting again!")
+        ev.player.send_message(f"{ColorFormat.RED}You must wait {time_remaining:.2f}s before chatting again!")
         ev.is_cancelled = True
 
     if enhanced_chat :
@@ -68,7 +71,7 @@ def handle_chat_event(self: "PrimeBDS", ev: PlayerChatEvent):
         name_tag = escape_braces(ev.player.name_tag)
         safe_msg = escape_braces(ev.message)
         chat_prefix = escape_braces(config['modules']['server_messages']['chat_prefix'])
-        ev.format = f"{prefix}{name_tag}{suffix}{chat_prefix}§r{safe_msg}"
+        ev.format = f"{prefix}{name_tag}{suffix}{chat_prefix}{ColorFormat.RESET}{safe_msg}"
 
     discordRelay(f"**{ev.player.name}**: {ev.message}", "chat")
     return True

@@ -91,10 +91,11 @@ class ActionFormData:
         :param player: Player to show this dialog to.
         :raises: This function can throw errors.
         """
-        self._form.on_submit = lambda p=Player, r=int: self.__form_submit(
+        self._callback = None
+        self._form.on_submit = lambda p, r: self.__form_submit(
             p, r, result=ActionFormResponse(False, r)
         )
-        self._form.on_close = lambda p=Player: self.__form_submit(
+        self._form.on_close = lambda p: self.__form_submit(
             p, 0, result=ActionFormResponse(True, None)
         )
         player.send_form(self._form)

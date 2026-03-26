@@ -25,7 +25,7 @@ def is_valid_port(port_str: str) -> bool:
     return 1 <= port <= 65535
 
 def strip_port(ip_with_port: str) -> str:
-            return ip_with_port.split(":")[0] if ip_with_port else ""
+    return ip_with_port.split(":")[0] if ip_with_port else ""
 
 def same_subnet(ip1: str, ip2: str, subnet_mask: int = 24) -> bool:
     try:
@@ -33,13 +33,8 @@ def same_subnet(ip1: str, ip2: str, subnet_mask: int = 24) -> bool:
         ip2_clean = strip_port(ip2)
         network1 = ipaddress.IPv4Network(f"{ip1_clean}/{subnet_mask}", strict=False)
         network2 = ipaddress.IPv4Network(f"{ip2_clean}/{subnet_mask}", strict=False)
-        
-        ip1_addr = ipaddress.IPv4Address(ip1_clean)
-        ip2_addr = ipaddress.IPv4Address(ip2_clean)
-
-        return ip1_addr in network2 or ip2_addr in network1
-    except Exception as e:
-        # print(f"DEBUG same_subnet error: {e}")
+        return network1 == network2
+    except Exception:
         return False
 
 

@@ -10,23 +10,28 @@ class TimezoneUtils:
     def is_dst(timestamp):
         """Determines if a given timestamp falls within Daylight Saving Time (DST) for Eastern Time."""
         try:
-            dt = datetime.utcfromtimestamp(timestamp)  # Use UTC time
+            dt = datetime.utcfromtimestamp(timestamp)
         except (OSError, ValueError):
-            return False  # If timestamp is invalid, return False
+            return False
 
         year = dt.year
 
-        # Second Sunday of March at 2 AM (DST Start)
-        dst_start = datetime(year, 3, 8, 2)  # Start searching from March 8th at 2 AM
-        while dst_start.weekday() != 6:  # Find the first Sunday
+        # Second Sunday of March at 2 AM EST (7 AM UTC) - DST Start
+        # Find March 1, then find the second Sunday
+        dst_start = datetime(year, 3, 1, 7)  # 2 AM EST = 7 AM UTC
+        sundays_found = 0
+        while sundays_found < 2:
+            if dst_start.weekday() == 6:
+                sundays_found += 1
+                if sundays_found == 2:
+                    break
             dst_start += timedelta(days=1)
 
-        # First Sunday of November at 2 AM (DST End)
-        dst_end = datetime(year, 11, 1, 2)  # Start searching from November 1st at 2 AM
+        # First Sunday of November at 2 AM EDT (6 AM UTC) - DST End
+        dst_end = datetime(year, 11, 1, 6)  # 2 AM EDT = 6 AM UTC
         while dst_end.weekday() != 6:
             dst_end += timedelta(days=1)
 
-        # Eastern Daylight Time (EDT) applies between these dates
         return dst_start <= dt < dst_end
 
     @staticmethod

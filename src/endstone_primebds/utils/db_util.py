@@ -3,12 +3,10 @@ import os
 import re
 import sqlite3
 import threading
-import ast
 from dataclasses import dataclass, fields
 import time
 from typing import List, Tuple, Any, Dict, Optional
-from endstone import Player
-from endstone.inventory import ItemStack
+from endstone import ColorFormat, Player
 from endstone.level import Location
 from endstone.util import Vector
 from endstone_primebds.utils.address_util import same_subnet
@@ -157,21 +155,6 @@ class LastWarp:
     cost: int
     cooldown: int
     delay: int
-
-@dataclass
-class Inventory:
-    name: str
-    xuid: str
-    slot_type: str
-    slot: int
-    type: str
-    amount: int
-    damage: int
-    display_name: str
-    enchants: str
-    lore: str
-    unbreakable: bool
-    data: int
 
 # DB
 class DatabaseManager:
@@ -1153,23 +1136,6 @@ class UserDB(DatabaseManager):
         }
         self.create_table('warn_logs', warn_log_columns)
 
-        inventory_columns = {
-            'xuid': 'TEXT',
-            'name': 'TEXT',
-            'type': 'TEXT',
-            'amount': 'INTEGER',
-            'damage': 'INTEGER',
-            'display_name': 'TEXT',
-            'enchants': 'TEXT', 
-            'lore': 'TEXT', 
-            'unbreakable': 'INTEGER',
-            'slot_type': 'TEXT',
-            'slot': 'INTEGER',
-            'data': 'INTEGER'
-        }
-        self.create_table('inventories', inventory_columns)
-        self.create_table('ender_chests', inventory_columns)
-
     def save_user(self, player: Player):
         """Primary data saving for users."""
         xuid = player.xuid
@@ -1763,24 +1729,24 @@ class UserDB(DatabaseManager):
                 ip_ban_status = "IP " if is_ip_banned else ""
                 active_punishments["Ban"] = (
                     timestamp,
-                    f"§c{ip_ban_status}Ban §7- §e{ban_reason} "
-                    f"§7(§e{ban_expires_in}§7)\n"
-                    f"§oDate Issued: §7{formatted_time}§r"
+                    f"{ColorFormat.RED}{ip_ban_status}Ban {ColorFormat.GRAY}- {ColorFormat.YELLOW}{ban_reason} "
+                    f"{ColorFormat.GRAY}({ColorFormat.YELLOW}{ban_expires_in}{ColorFormat.GRAY})\n"
+                    f"{ColorFormat.ITALIC}Date Issued: {ColorFormat.GRAY}{formatted_time}{ColorFormat.RESET}"
                 )
             elif action_type == "Mute" and is_muted and mute_time > current_time and "Mute" not in active_punishments:
                 mute_expires_in = format_time_remaining(mute_time, True)
                 active_punishments["Mute"] = (
                     timestamp,
-                    f"§bMute §7- §e{mute_reason} "
-                    f"§7(§e{mute_expires_in}§7)\n"
-                    f"§oDate Issued: §7{formatted_time}§r"
+                    f"{ColorFormat.AQUA}Mute {ColorFormat.GRAY}- {ColorFormat.YELLOW}{mute_reason} "
+                    f"{ColorFormat.GRAY}({ColorFormat.YELLOW}{mute_expires_in}{ColorFormat.GRAY})\n"
+                    f"{ColorFormat.ITALIC}Date Issued: {ColorFormat.GRAY}{formatted_time}{ColorFormat.RESET}"
                 )
             
             else:
                 past_punishments.append(
-                    f"§9{action_type} §7- §e{reason} "
-                    f"§7(§eEXPIRED§7)\n"
-                    f"§oDate Issued: §7{formatted_time}§r"
+                    f"{ColorFormat.BLUE}{action_type} {ColorFormat.GRAY}- {ColorFormat.YELLOW}{reason} "
+                    f"{ColorFormat.GRAY}({ColorFormat.YELLOW}EXPIRED{ColorFormat.GRAY})\n"
+                    f"{ColorFormat.ITALIC}Date Issued: {ColorFormat.GRAY}{formatted_time}{ColorFormat.RESET}"
                 )
 
         per_page = 5
@@ -1791,17 +1757,17 @@ class UserDB(DatabaseManager):
         msg = [f""]
 
         if active_punishments:
-            msg.append(f"§aActive §6Punishments for §e{name}§6:")
+            msg.append(f"{ColorFormat.GREEN}Active {ColorFormat.GOLD}Punishments for {ColorFormat.YELLOW}{name}{ColorFormat.GOLD}:")
             for _, entry in active_punishments.values():
-                msg.append(f"§7- {entry}")
-            msg.append("§6---------------")
+                msg.append(f"{ColorFormat.GRAY}- {entry}")
+            msg.append(f"{ColorFormat.GOLD}---------------")
 
-        msg.append(f"§4Past §6Punishments for §e{name}§6:§r")
-        msg.extend(f"§7- {entry}" for entry in paginated_past)
-        msg.append("§6---------------")
+        msg.append(f"{ColorFormat.DARK_RED}Past {ColorFormat.GOLD}Punishments for {ColorFormat.YELLOW}{name}{ColorFormat.GOLD}:{ColorFormat.RESET}")
+        msg.extend(f"{ColorFormat.GRAY}- {entry}" for entry in paginated_past)
+        msg.append(f"{ColorFormat.GOLD}---------------")
 
         if page < total_pages:
-            msg.append(f"§8Use §e/punishments {name} {page + 1} §8for more.")
+            msg.append(f"{ColorFormat.DARK_GRAY}Use {ColorFormat.YELLOW}/punishments {name} {page + 1} {ColorFormat.DARK_GRAY}for more.")
 
         return "\n".join(msg)
 
@@ -2022,293 +1988,6 @@ class UserDB(DatabaseManager):
         if permission in perms:
             del perms[permission]
             self.set_permissions(xuid, perms)
-
-    def save_inventory(self, player: Player) -> None:
-        try:
-            player_data = {
-                "xuid": player.xuid,
-                "name": player.name,
-                "inventory": [player.inventory.get_item(i) for i in range(player.inventory.size)],
-                "armor": {
-                    "helmet": getattr(player.inventory, "helmet", None),
-                    "chestplate": getattr(player.inventory, "chestplate", None),
-                    "leggings": getattr(player.inventory, "leggings", None),
-                    "boots": getattr(player.inventory, "boots", None),
-                    "offhand": getattr(player.inventory, "item_in_off_hand", None)
-                }
-            }
-        except Exception as e:
-            print(f"[Inventory Save] {player.name} inventory could not be saved: {e}")
-
-        values = []
-
-        for i, item in enumerate(player_data["inventory"]):
-            if not item:
-                continue
-            try:
-                meta = getattr(item, "item_meta", None) or {}
-                values.append((
-                    player_data["xuid"],
-                    player_data["name"],
-                    "slot",
-                    i,
-                    str(getattr(item, "type", "minecraft:air")),
-                    getattr(item, "amount", 1),
-                    getattr(meta, "damage", 0),
-                    getattr(meta, "display_name", ""),
-                    self._serialize_enchants(getattr(meta, "enchants", {})),
-                    json.dumps(getattr(meta, "lore", [])),
-                    getattr(meta, "is_unbreakable", False),
-                    getattr(item, "data", None)
-                ))
-            except Exception as e:
-                print(f"[Inventory Save] Failed to save slot {i} for {player.name}: {e}")
-                continue
-
-        for slot_type, item in player_data["armor"].items():
-            if not item:
-                continue
-            try:
-                meta = getattr(item, "item_meta", None) or {}
-                values.append((
-                    player_data["xuid"],
-                    player_data["name"],
-                    slot_type,
-                    0,
-                    str(getattr(item, "type", "minecraft:air")),
-                    getattr(item, "amount", 1),
-                    getattr(meta, "damage", 0),
-                    getattr(meta, "display_name", ""),
-                    self._serialize_enchants(getattr(meta, "enchants", {})),
-                    json.dumps(getattr(meta, "lore", [])),
-                    getattr(meta, "is_unbreakable", False),
-                    getattr(item, "data", None)
-                ))
-            except Exception as e:
-                print(f"[Inventory Save] Failed to save {slot_type} for {player.name}: {e}")
-                continue
-
-        with self._lock:
-            cursor = self.conn.cursor()
-            cursor.execute("DELETE FROM inventories WHERE xuid = ?", (player_data["xuid"],))
-            if values:
-                cursor.executemany("""
-                    INSERT INTO inventories
-                    (xuid, name, slot_type, slot, type, amount, damage, display_name, enchants, lore, unbreakable, data)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, values)
-                self.conn.commit()
-
-        self.invalidate_user_cache(player.xuid)
-
-    def get_inventory(self, xuid: str) -> list[dict]:
-        """Fetch inventory rows as flat dicts ready for load_inventory."""
-        self.cursor.execute("SELECT * FROM inventories WHERE xuid = ?", (xuid,))
-        rows = self.cursor.fetchall()
-        items = []
-
-        for row in rows:
-            try:
-
-                try:
-                    if not row[6] or row[6] in ("null", "0"):
-                        enchants = {}
-                    else:
-                        try:
-                            enchants = json.loads(row[6])
-                        except Exception:
-                            try:
-                                enchants = ast.literal_eval(row[6])
-                            except Exception:
-                                enchants = {}
-                except Exception:
-                    enchants = {}
-
-                try:
-                    if not row[7] or row[7] in ("null", "0"):
-                        lore = []
-                    else:
-                        try:
-                            lore = json.loads(row[7])
-                        except Exception:
-                            try:
-                                lore = ast.literal_eval(row[7])
-                            except Exception:
-                                lore = []
-                except Exception:
-                    lore = []
-
-                items.append({
-                    "xuid": row[0] or None,
-                    "name": row[1] or None,
-                    "slot_type": row[9] or "slot",
-                    "slot": int(row[10]) or 0,
-                    "type": row[2] or "minecraft:air",
-                    "amount": int(row[3]) if row[3] not in (None, 'null') else 1,
-                    "damage": int(row[4]) if row[4] not in (None, 'null') else 0,
-                    "display_name": row[5] or None,
-                    "enchants": enchants,
-                    "lore": lore,
-                    "unbreakable": bool(row[8]) if row[8] not in (None, 'null') else False,
-                    "data": int(row[11])
-                })
-
-            except Exception as e:
-                print(f"[WARN] Failed to load inventory row for {xuid}: {e}, row={row}")
-                continue
-
-        return items
-
-    def save_enderchest(self, player: Player) -> None:
-        player_data = {
-            "xuid": player.xuid,
-            "name": player.name,
-            "inventory": [player.ender_chest.get_item(i) for i in range(player.ender_chest.size)],
-        }
-
-        with self._lock:
-            cursor = self.conn.cursor()
-            cursor.execute("DELETE FROM ender_chests WHERE xuid = ?", (player_data["xuid"],))
-            values = []
-
-            for i, item in enumerate(player_data["inventory"]):
-                if not item:
-                    continue
-                meta = item.item_meta
-                values.append((
-                    player_data["xuid"],
-                    player_data["name"],
-                    "slot",
-                    i,
-                    str(item.type) or "minecraft:air",
-                    item.amount or 1,
-                    meta.damage,
-                    meta.display_name,
-                    self._serialize_enchants(getattr(meta, "enchants", {})),
-                    json.dumps(meta.lore),
-                    meta.is_unbreakable,
-                    item.data
-                ))
-
-            # Insert all at once
-            cursor.executemany("""
-                INSERT INTO ender_chests
-                (xuid, name, slot_type, slot, type, amount, damage, display_name, enchants, lore, unbreakable, data)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, values)
-            self.conn.commit()
-
-        self.invalidate_user_cache(player.xuid)
-
-    def get_enderchest(self, xuid: str) -> list[dict]:
-        self.cursor.execute("SELECT * FROM ender_chests WHERE xuid = ?", (xuid,))
-        rows = self.cursor.fetchall()
-        items = []
-
-        for row in rows:
-            try:
-
-                try:
-                    enchants = {} if not row[6] or row[6] in ("null", "0") else eval(row[6])
-                except Exception:
-                    enchants = {}
-
-                try:
-                    lore = [] if not row[7] or row[7] in ("null", "0") else eval(row[7])
-                except Exception:
-                    lore = []
-
-                items.append({
-                    "xuid": row[0] or None,
-                    "name": row[1] or None,
-                    "slot_type": row[9] or "slot",
-                    "slot": int(row[10]) or 0,
-                    "type": row[2] or "minecraft:air",
-                    "amount": int(row[3]) if row[3] not in (None, 'null') else 1,
-                    "damage": int(row[4]) if row[4] not in (None, 'null') else 0,
-                    "display_name": row[5] or None,
-                    "enchants": enchants,
-                    "lore": lore,
-                    "unbreakable": bool(row[8]) if row[8] not in (None, 'null') else False,
-                    "data": int(row[11])
-                })
-
-            except Exception as e:
-                print(f"[WARN] Failed to load ender chestrow for {xuid}: {e}, row={row}")
-                continue
-
-        return items
-    
-    def load_inventory(self, player: Player) -> None:
-        """Apply DB inventory to player object"""
-        items = self.get_inventory(player.xuid)
-        inv = player.inventory
-
-        for entry in items:
-            try:
-                slot_type = entry.get("slot_type", "slot")
-                slot = entry.get("slot", 0)
-                item = ItemStack(entry["type"], int(entry.get("amount", 1)), int(entry.get("data", 0)))
-                new_meta = item.item_meta
-
-                if new_meta:
-                    new_meta.display_name = entry.get("display_name") or None
-                    new_meta.lore = entry.get("lore") or []
-                    new_meta.damage = entry.get("damage") or 0
-                    new_meta.is_unbreakable = bool(entry.get("unbreakable")) or False
-
-                    enchants = entry.get("enchants") or {}
-                    for ench_name, level in enchants.items():
-                        new_meta.add_enchant(ench_name, level, True)
-
-                item.set_item_meta(new_meta)
-
-                if slot_type == "helmet":
-                    inv.helmet = item
-                elif slot_type == "chestplate":
-                    inv.chestplate = item
-                elif slot_type == "leggings":
-                    inv.leggings = item
-                elif slot_type == "boots":
-                    inv.boots = item
-                elif slot_type == "offhand":
-                    inv.item_in_off_hand = item
-                elif slot_type == "slot":
-                    inv.set_item(slot, item)
-
-            except Exception as e:
-                print(f"Failed to load item for player {player.name} ({player.xuid}): {e}, entry={entry}")
-                continue
-
-    def load_enderchest(self, player: Player) -> None:
-        """Apply DB inventory to player object"""
-        items = self.get_enderchest(player.xuid)
-        inv = player.ender_chest
-
-        for entry in items:
-            try:
-                item = ItemStack(entry["type"], entry.get("amount", 1), entry.get("data", 0))
-                new_meta = item.item_meta
-
-                if new_meta:
-                    new_meta.display_name = entry.get("display_name")
-                    new_meta.lore = entry.get("lore") or None
-                    new_meta.damage = entry.get("damage") or 0
-                    new_meta.is_unbreakable = bool(entry.get("unbreakable")) or False
-
-                    enchants = entry.get("enchants") or {}
-                    for ench_name, level in enchants.items():
-                        new_meta.add_enchant(ench_name, level, True)
-
-                item.set_item_meta(new_meta)
-
-                slot_type = entry.get("slot_type", "slot")
-                slot = entry.get("slot", 0)
-                inv.set_item(slot, item)
-
-            except Exception as e:
-                print(f"Failed to load item for player {player.name} ({player.xuid}): {e}, entry={entry}")
-                continue
 
     def update_user_data(self, name: str, column: str, value):
         self.invalidate_user_cache(self.get_xuid_by_name(name))

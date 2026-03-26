@@ -1,13 +1,8 @@
+from endstone import ColorFormat
 from endstone.command import CommandSender
 from endstone.inventory import ItemStack
 from endstone_primebds.utils.command_util import create_command
 from endstone_primebds.utils.target_selector_util import get_matching_actors
-
-try:
-    from endstone._internal.endstone_python import NamespacedKey
-    HAS_NAMESPACEDKEY = True
-except ImportError:
-    HAS_NAMESPACEDKEY = False
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -29,7 +24,7 @@ command, permission = create_command(
 
 def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
     if len(args) < 2:
-        sender.send_message("§cUsage: /giveforce <player> <block> [amount]")
+        sender.send_message(f"{ColorFormat.RED}Usage: /giveforce <player> <block> [amount]")
         return False
 
     target_selector = args[0]
@@ -41,14 +36,14 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
         try:
             amount = int(args[2])
         except ValueError:
-            sender.send_message("§cInvalid amount")
+            sender.send_message(f"{ColorFormat.RED}Invalid amount")
             return False
 
         if amount < 1:
-            sender.send_message("§cAmount must be a positive integer")
+            sender.send_message(f"{ColorFormat.RED}Amount must be a positive integer")
             return False
         if amount > 255:
-            sender.send_message("§cAmount must be 255 or lower")
+            sender.send_message(f"{ColorFormat.RED}Amount must be 255 or lower")
             return False
     
     if len(args) >= 4:
@@ -56,7 +51,7 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
 
     targets = get_matching_actors(self, target_selector, sender)
     if not targets:
-        sender.send_message("§cNo matching players found")
+        sender.send_message(f"{ColorFormat.RED}No matching players found")
         return False
     
     if "invisiblebedrock" in block_id:
@@ -65,15 +60,15 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
     try:
         block = ItemStack(block_id, amount, data)
     except Exception:
-        sender.send_message("§cInvalid block ID")
+        sender.send_message(f"{ColorFormat.RED}Invalid block ID")
         return False
     
     for target in targets:
         target.inventory.add_item(block)
 
     if len(targets) == 1:
-        sender.send_message(f"§e{targets[0].name} §rwas given §7x{amount} §e{block.type.key}")
+        sender.send_message(f"{ColorFormat.YELLOW}{targets[0].name} {ColorFormat.RESET}was given {ColorFormat.GRAY}x{amount} {ColorFormat.YELLOW}{block.type.id}")
     else:
-        sender.send_message(f"§e{len(targets)} §rplayers were given §7x{amount} §e{block.type.key}")
+        sender.send_message(f"{ColorFormat.YELLOW}{len(targets)} {ColorFormat.RESET}players were given {ColorFormat.GRAY}x{amount} {ColorFormat.YELLOW}{block.type.id}")
 
     return True

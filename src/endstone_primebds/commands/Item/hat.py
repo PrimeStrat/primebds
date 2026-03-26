@@ -30,7 +30,7 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
     if len(args) == 0:
         sender.inventory.helmet = held_item
         sender.inventory.clear(sender.inventory.held_item_slot)
-        sender.send_message(f"§eYour {held_item.type.key} is now a hat!")
+        sender.send_message(f"§eYour {held_item.type.id} is now a hat!")
         return True
 
     if not sender.has_permission("primebds.command.repair.other"):
@@ -48,8 +48,8 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
         hat_count += 1
 
     if hat_count == 1:
-        sender.send_message(f"§eYour {held_item.type.key} is now a hat for {target.name}!")
+        sender.send_message(f"§eYour {held_item.type.id} is now a hat for {target.name}!")
     else:
-        sender.send_message(f"§e{hat_count} §rplayers' is now wearing {held_item.type.key}")
+        sender.send_message(f"§e{hat_count} §rplayers' is now wearing {held_item.type.id}")
 
     return True

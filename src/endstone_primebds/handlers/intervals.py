@@ -1,3 +1,4 @@
+from endstone import ColorFormat
 from endstone_primebds.utils.config_util import load_config
 from endstone_primebds.utils.intervals_util import IntervalManager
 
@@ -55,7 +56,7 @@ def check_afk(self: "PrimeBDS"):
 
                 if is_afk:
                     self.db.update_user_data(player.name, "is_afk", 0)
-                    msg = f"§e{player.name} is no longer AFK"
+                    msg = f"{ColorFormat.YELLOW}{player.name} is no longer AFK"
 
                     if broadcast:
                         for p in self.server.online_players:
@@ -72,7 +73,7 @@ def check_afk(self: "PrimeBDS"):
 
                 if idle_time >= idle_threshold and not is_afk:
                     self.db.update_user_data(player.name, "is_afk", 1)
-                    msg = f"§e{player.name} is now AFK"
+                    msg = f"{ColorFormat.YELLOW}{player.name} is now AFK"
 
                     if broadcast:
                         self.server.broadcast_message(msg)
@@ -117,6 +118,8 @@ def stop_intervals(self: "PrimeBDS"):
     """Stop all periodic checks safely (on shutdown)."""
     if hasattr(self, "interval_manager"):
         self.interval_manager.stop()
+    if hasattr(self, "afk_interval_manager"):
+        self.afk_interval_manager.stop()
 
 def recheck_all_intervals(self: "PrimeBDS"):
     """

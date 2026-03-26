@@ -3,7 +3,7 @@ import os
 import threading
 import time
 import traceback
-from endstone import Player
+from endstone import ColorFormat, Player
 from endstone.plugin import Plugin
 from endstone.command import Command, CommandSender
 
@@ -45,7 +45,6 @@ from endstone_primebds.handlers.chat import handle_chat_event
 from endstone_primebds.handlers.preprocesses import handle_command_preprocess, handle_server_command_preprocess
 from endstone_primebds.handlers.connections import handle_login_event, handle_join_event, handle_leave_event, handle_kick_event
 from endstone_primebds.handlers.combat import handle_kb_event, handle_damage_event
-from endstone_primebds.handlers.multiworld import start_additional_servers, stop_additional_servers, is_nested_multiworld_instance
 from endstone_primebds.handlers.intervals import stop_intervals, init_afk_intervals
 from endstone_primebds.handlers.actions import handle_gamemode_event, handle_interact_event, handle_teleport_event, handle_death_event
 from endstone_primebds.handlers.items import handle_item_pickup_event
@@ -129,31 +128,31 @@ class PrimeBDS(Plugin):
     def on_player_interact(self, ev: PlayerInteractActorEvent):
         handle_interact_event(self, ev)
 
-    @event_handler()
+    @event_handler
     def on_item_pickup(self, ev: PlayerPickupItemEvent):
         handle_item_pickup_event(self, ev)
 
-    @event_handler()
+    @event_handler
     def on_entity_hurt(self, ev: ActorDamageEvent):
         handle_damage_event(self, ev)
 
-    @event_handler()
+    @event_handler
     def on_entity_kb(self, ev: ActorKnockbackEvent):
         handle_kb_event(self, ev)
 
-    @event_handler()
+    @event_handler
     def on_player_login(self, ev: PlayerLoginEvent):
         handle_login_event(self, ev)
 
-    @event_handler()
+    @event_handler
     def on_player_join(self, ev: PlayerJoinEvent):
         handle_join_event(self, ev)
 
-    @event_handler()
+    @event_handler
     def on_player_quit(self, ev: PlayerQuitEvent):
         handle_leave_event(self, ev)
 
-    @event_handler()
+    @event_handler
     def on_player_kick(self, ev: PlayerKickEvent):
         handle_kick_event(self, ev)
 
@@ -169,7 +168,7 @@ class PrimeBDS(Plugin):
     def on_player_chat(self, ev: PlayerChatEvent):
         handle_chat_event(self, ev)
 
-    @event_handler()
+    @event_handler
     def on_server_load(self, ev: ServerLoadEvent):
         eco = get_eco_link(self)
         if eco:
@@ -201,7 +200,6 @@ class PrimeBDS(Plugin):
             self.serverdb.update_server_info("allowlist_profile", "default")
 
         self.gamerules = self.serverdb.get_gamerules()
-        self.server.scheduler.run_task(self, start_additional_servers(self), 1)
         self.check_for_inactive_sessions()
 
     def on_disable(self):
@@ -213,10 +211,6 @@ class PrimeBDS(Plugin):
 
         self.serverdb.update_server_info("last_shutdown_time", int(time.time()))
         self.serverdb.close_connection()
-
-        if not is_nested_multiworld_instance():
-            stop_additional_servers(self)
-            return
 
     def check_for_inactive_sessions(self):
         current_time = int(time.time())
@@ -382,7 +376,7 @@ class PrimeBDS(Plugin):
         try:
             if command.name in self.handlers:
                 if any(arg.find("@e") != -1 or arg.find("@n") != -1 for arg in args):
-                    sender.send_message("§cSelector must be player-type")
+                    sender.send_message(f"{ColorFormat.RED}Selector must be player-type")
                     return False
                 else:
                     handler_func = self.handlers[command.name]
@@ -405,13 +399,13 @@ class PrimeBDS(Plugin):
                 return "\n".join(cleaned_lines)
 
             error_message = (
-                f"§c========\n"
-                f"§6This command generated an error -> please report this on our GitHub and provide a copy of the error below!\n"
-                f"§c========\n\n"
-                f"§e{e}\n\n"
-                f"§eCommand Usage: §b{command.name} + {args}\n\n"
-                + f"§e{clean_traceback(traceback.format_exc())}\n"
-                  f"§r"
+                f"{ColorFormat.RED}========\n"
+                f"{ColorFormat.GOLD}This command generated an error -> please report this on our GitHub and provide a copy of the error below!\n"
+                f"{ColorFormat.RED}========\n\n"
+                f"{ColorFormat.YELLOW}{e}\n\n"
+                f"{ColorFormat.YELLOW}Command Usage: {ColorFormat.AQUA}{command.name} + {args}\n\n"
+                + f"{ColorFormat.YELLOW}{clean_traceback(traceback.format_exc())}\n"
+                  f"{ColorFormat.RESET}"
             )
             error_message_console = (
                 f"========\n"

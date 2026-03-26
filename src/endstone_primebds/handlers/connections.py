@@ -2,7 +2,7 @@ import json
 import os
 import time
 
-from endstone.util import Vector
+from endstone import ColorFormat
 from endstone.event import PlayerLoginEvent, PlayerJoinEvent, PlayerQuitEvent, PlayerKickEvent
 from typing import TYPE_CHECKING
 from datetime import datetime
@@ -10,7 +10,6 @@ from datetime import datetime
 from endstone_primebds.utils.config_util import load_config
 from endstone_primebds.utils.mod_util import format_time_remaining, ban_message
 from endstone_primebds.utils.logging_util import log, discordRelay
-from endstone.inventory import ItemStack
 
 import endstone_primebds.utils.internal_permissions_util as perms_util
 
@@ -44,14 +43,16 @@ def handle_login_event(self: "PrimeBDS", ev: PlayerLoginEvent):
     
     # Handle IP Ban
     if is_ip_banned:
-        banned_time = datetime.fromtimestamp(mod_log.banned_time)
-        if now >= banned_time:  # IP Ban has expired
-            self.db.remove_ban(player_ip)
-        else:  # IP Ban is still active
-            formatted_expiration = format_time_remaining(mod_log.banned_time)
-            message = ban_message(self.server.level.name, formatted_expiration, "IP Ban - " + mod_log.ban_reason)
-            ev.kick_message = message
-            ev.is_cancelled = True 
+        ip_ban_log = self.db.get_ip_ban_log(player_ip) if hasattr(self.db, 'get_ip_ban_log') else mod_log
+        if ip_ban_log:
+            banned_time = datetime.fromtimestamp(ip_ban_log.banned_time)
+            if now >= banned_time:
+                self.db.remove_ban(player_ip)
+            else:
+                formatted_expiration = format_time_remaining(ip_ban_log.banned_time)
+                message = ban_message(self.server.level.name, formatted_expiration, "IP Ban - " + (ip_ban_log.ban_reason or "No reason"))
+                ev.kick_message = message
+                ev.is_cancelled = True 
 
     # Handle XUID Ban
     elif mod_log:
@@ -101,7 +102,7 @@ def handle_join_event(self: "PrimeBDS", ev: PlayerJoinEvent):
             alts = self.db.get_alts(str(ev.player.address), ev.player.device_id, ev.player.xuid)
             if len(alts) > 0:
                 alt_names = ", ".join(alt["name"] for alt in alts)
-                message = f"§6Alt Detected: §e{ev.player.name} §7-> §8[§7{alt_names}§8]"
+                message = f"{ColorFormat.GOLD}Alt Detected: {ColorFormat.YELLOW}{ev.player.name} {ColorFormat.GRAY}-> {ColorFormat.DARK_GRAY}[{ColorFormat.GRAY}{alt_names}{ColorFormat.DARK_GRAY}]"
                 log(self, message, "mod", toggles=["enabled_as"])
 
             # Handle Activity
@@ -110,7 +111,7 @@ def handle_join_event(self: "PrimeBDS", ev: PlayerJoinEvent):
     warning = self.db.get_latest_active_warning(ev.player.xuid, ev.player.name)
     if warning:
         reason = warning.get("warn_reason", "Negative Behavior")
-        ev.player.send_message(f"§6Reminder: You were recently warned for §e{reason}")
+        ev.player.send_message(f"{ColorFormat.GOLD}Reminder: You were recently warned for {ColorFormat.YELLOW}{reason}")
 
     if rank_meta_nametags:
         prefix = perms_util.get_prefix(user.internal_rank, perms_util.PERMISSIONS)
@@ -150,8 +151,7 @@ def handle_leave_event(self: "PrimeBDS", ev: PlayerQuitEvent):
             rounded_x = round(ev.player.location.x)
             rounded_y = round(ev.player.location.y)
             rounded_z = round(ev.player.location.z)
-            rounded_coords = Vector(rounded_x, rounded_y, rounded_z)
-            self.db.update_user_data(ev.player.name, 'last_logout_pos', rounded_coords)
+            self.db.update_user_data(ev.player.name, 'last_logout_pos', f"{rounded_x},{rounded_y},{rounded_z}")
             self.db.update_user_data(ev.player.name, 'last_logout_dim', ev.player.dimension.name)
 
     discordRelay(f"**{ev.player.name}** has left the server ***({len(self.server.online_players)-1}/{self.server.max_players})***", "connections")

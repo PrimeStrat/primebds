@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from endstone import Player
+from endstone import ColorFormat, Player
 from endstone.inventory import ItemStack
 
 from typing import TYPE_CHECKING
@@ -8,11 +8,11 @@ if TYPE_CHECKING:
 
 
 def ban_message(server, expiration, reason) -> str:
-    return f"""
-§cYou were banned from §6{server}
-§cPunishment Expires: §6{expiration}
-§cPunishment Reason: §6{reason}
-""".strip()
+    return (
+        f"{ColorFormat.RED}You were banned from {ColorFormat.GOLD}{server}\n"
+        f"{ColorFormat.RED}Punishment Expires: {ColorFormat.GOLD}{expiration}\n"
+        f"{ColorFormat.RED}Punishment Reason: {ColorFormat.GOLD}{reason}"
+    )
 
 def format_time_remaining(expiration, is_not_ban = False) -> str:
     expiration_datetime = datetime.fromtimestamp(expiration)

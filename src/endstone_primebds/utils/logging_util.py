@@ -94,17 +94,17 @@ def send_discord_message(webhook_url, payload):
     backoff = INITIAL_BACKOFF 
 
     while retries < MAX_RETRIES:
+        response = None
         try:
-            response = requests.post(webhook_url, json=payload)
+            response = requests.post(webhook_url, json=payload, timeout=10)
             response.raise_for_status()
             return True
         except requests.exceptions.RequestException as e:
-            # Check if rate limit (HTTP 429) occurred
-            if response.status_code == 429:
+            if response is not None and response.status_code == 429:
                 retries += 1
-                wait_time = backoff * (2 ** retries)  # Exponential backoff
+                wait_time = backoff * (2 ** retries)
                 print(f"[primebds - Discord Log] Rate limit exceeded. Retrying in {wait_time}s...")
-                time.sleep(wait_time)  # Wait before retrying
+                time.sleep(wait_time)
             else:
                 print(f"Failed to send Discord message: {e}")
                 return False
