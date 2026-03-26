@@ -37,15 +37,6 @@ def preload_settings():
             "prefix": "§l§8[§c!§8] §r§e",
             "playsound": "random.toast"
         }),
-        "rtp": OrderedDict({
-            "x": 0,
-            "z": 0,
-            "min_distance": 100,
-            "radius": 1000,
-            "cost": 0,
-            "delay": 0,
-            "cooldown": 0
-        }),
         "permissions_manager": OrderedDict({
             "primebds": True,
             "endstone": True,
@@ -97,11 +88,6 @@ def preload_settings():
             "leave_message": "§e{player} left the game",
             "shutdown": "Server has shutdown!"
         }),
-        "server_optimizer": OrderedDict({
-            "mute_laggy_sounds": True,
-            "mute_laggy_block_events": True,
-            "mute_laggy_movement_updates": False
-        }),
         "server_messages": OrderedDict({
             "skin_change_messages": True,
             "enhanced_whispers": True,
@@ -151,29 +137,6 @@ def preload_settings():
                     "disable_sprint_hits": True
                 })
             })
-        }),
-        "multiworld": OrderedDict({
-            "worlds": OrderedDict({
-                "example": OrderedDict({
-                    "enabled": False,
-                    "server-port": 19134,
-                    "server-portv6": 19135,
-                    "level-name": "example",
-                    "server-name": "Dedicated Server",
-                    "gamemode": "survival",
-                    "difficulty": "easy",
-                    "default-player-permission-level": "member",
-                    "max-players": 10,
-                    "view-distance": 12,
-                    "tick-distance": 4,
-                    "max-threads": 0,
-                    "level-seed": "",
-                    "compression-threshold": 30000,
-                    "texturepack-required": False,
-                    "allow-list": True,
-                    "allow-cheats": True
-                })
-            })
         })
     })
 
@@ -186,14 +149,7 @@ def preload_settings():
         if module not in config["modules"]:
             config["modules"][module] = defaults
             changed = True
-
-    # Remove unknown top-level modules (optional; can be commented if you want full safety)
-    # for module in list(config["modules"].keys()):
-    #     if module not in default_modules:
-    #         del config["modules"][module]
-    #         changed = True
-
-    # Save only if new modules were added, never overwrite existing ones unnecessarily
+            
     if changed:
         try:
             save_config(config)
