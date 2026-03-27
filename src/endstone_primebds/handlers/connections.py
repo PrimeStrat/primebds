@@ -134,11 +134,6 @@ def handle_leave_event(self: "PrimeBDS", ev: PlayerQuitEvent):
     self.db.update_user_data(ev.player.name, 'xp', ev.player.total_exp)
     self.db.update_user_data(ev.player.name, 'last_leave', int(time.time()))
     self.db.update_user_data(ev.player.name, "is_afk", 0)
-    self.db.save_inventory(ev.player)
-    self.db.save_enderchest(ev.player)
-
-    if ev.player.unique_id in self.vanish_state:
-        del self.vanish_state[ev.player.unique_id]
 
     # Ban System: ENHANCEMENT
     mod_log = self.db.get_mod_log(ev.player.xuid)
