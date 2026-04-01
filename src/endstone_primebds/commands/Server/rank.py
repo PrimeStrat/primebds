@@ -150,8 +150,8 @@ def handler(self: "PrimeBDS", sender: CommandSender, args: list[str]) -> bool:
         sender.send_message(f"§bRank: §r{proper_rank}")
         sender.send_message(f"§bWeight: §r{rank.get('weight', 0)}")
         sender.send_message(f"§bInherits: §r{rank.get('inherits', [])}")
-        sender.send_message(f"§bPrefix: §r{rank.get('prefix', "Unset")}")
-        sender.send_message(f"§bSuffix: §r{rank.get('suffix', "Unset")}")
+        sender.send_message(f"§bPrefix: §r{rank.get('prefix', 'Unset')}")
+        sender.send_message(f"§bSuffix: §r{rank.get('suffix', 'Unset')}")
         sender.send_message("§bPermissions:")
         for perm, value in rank.get("permissions", {}).items():
             color = "§a" if value else "§c"
