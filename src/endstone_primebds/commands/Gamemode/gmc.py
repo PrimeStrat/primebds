@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 # Register command
 command, permission = create_command(
     "gmc",
-    "Sets your game mode to adventure!",
+    "Sets your game mode to creative!",
     ["/gmc [player: player]"],
     ["primebds.command.gmc"]
 )
