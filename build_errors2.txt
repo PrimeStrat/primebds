@@ -1,0 +1,15 @@
+﻿
+FAILED: [code=2] CMakeFiles/primebds.dir/src/handlers/connections/leave.cpp.obj 
+C:\Users\mkate\OneDrive\Documents\GitHub\primebds\src\handlers\connections\leave.cpp(52): 
+error C2660: 'primebds::db::SessionDB::endSession': function does not take 2 arguments
+FAILED: [code=2] CMakeFiles/primebds.dir/src/handlers/connections/kick.cpp.obj 
+C:\Users\mkate\OneDrive\Documents\GitHub\primebds\src\handlers\connections\kick.cpp(15): 
+error C2660: 'primebds::db::SessionDB::endSession': function does not take 2 arguments
+FAILED: [code=2] CMakeFiles/primebds.dir/src/utils/permissions/permission_manager.cpp.obj 
+C:\Users\mkate\OneDrive\Documents\GitHub\primebds\src\utils\permissions\permission_manager
+.cpp(334): error C2440: 'initializing': cannot convert from 
+'std::vector<endstone::Permission,std::allocator<endstone::Permission>>' to 
+'std::vector<endstone::Permission,std::allocator<endstone::Permission>> &'
+[ERROR] Build failed.
+
+
