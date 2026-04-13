@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: primebds-linux
-          path: build/linux/*.so
+          path: build/linux/output/
 
   build-windows:
     runs-on: windows-2022
@@ -66,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: primebds-windows
-          path: build/windows/*.dll
+          path: build/windows/output/
 
   release:
     needs: [ build-linux, build-windows ]

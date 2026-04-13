@@ -50,8 +50,8 @@ namespace primebds::handlers::preprocesses
         bool ban_on_exploit = modules.value("/me_crasher_patch/ban"_json_pointer, false);
         if (ban_on_exploit)
         {
-            plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
-                                               "tempban " + player.getName() + " 7 day Crasher Exploit");
+            (void)plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
+                                                     "tempban " + player.getName() + " 7 day Crasher Exploit");
         }
         else
         {

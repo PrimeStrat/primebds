@@ -35,6 +35,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(sqlite3)
 add_library(sqlite3 STATIC ${sqlite3_SOURCE_DIR}/sqlite3.c)
 target_include_directories(sqlite3 PUBLIC ${sqlite3_SOURCE_DIR})
+set_target_properties(sqlite3 PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # Version header
 string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
@@ -55,4 +56,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE
     nlohmann_json::nlohmann_json
     sqlite3
+)
+
+# Copy plugin binary to output/ folder after build
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/output
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${CMAKE_BINARY_DIR}/output/
+    COMMENT "Copying plugin to output/"
 )

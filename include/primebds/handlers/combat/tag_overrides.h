@@ -5,6 +5,7 @@
 
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 

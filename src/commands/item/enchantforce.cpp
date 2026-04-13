@@ -59,7 +59,7 @@ namespace primebds::commands
             if (!held || held->getType() == endstone::ItemType::Air)
                 continue;
             auto meta = held->getItemMeta();
-            meta->addEnchant(enchant_name, level, true);
+            (void)meta->addEnchant(enchant_name, level, true);
             held->setItemMeta(meta.get());
             p->getInventory().setItem(p->getInventory().getHeldItemSlot(), *held);
         }

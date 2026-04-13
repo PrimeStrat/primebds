@@ -165,9 +165,9 @@ namespace primebds::handlers::preprocesses
         if ((cmd == "teleport" || cmd == "tp") && mc_enabled &&
             player.hasPermission("minecraft.command.teleport") && !player.isOp())
         {
-            plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
-                                               "execute as \"" + player.getName() + "\" at \"" + player.getName() +
-                                                   "\" run " + command);
+            (void)plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
+                                                     "execute as \"" + player.getName() + "\" at \"" + player.getName() +
+                                                         "\" run " + command);
             event.setCancelled(true);
             return;
         }
@@ -278,8 +278,8 @@ namespace primebds::handlers::preprocesses
         // Op → rank set operator
         if (cmd == "op" && args.size() > 1)
         {
-            plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
-                                               "rank set \"" + args[1] + "\" operator");
+            (void)plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
+                                                     "rank set \"" + args[1] + "\" operator");
             event.setCancelled(true);
             return;
         }
@@ -287,8 +287,8 @@ namespace primebds::handlers::preprocesses
         // Deop → rank set default
         if (cmd == "deop" && args.size() > 1)
         {
-            plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
-                                               "rank set \"" + args[1] + "\" default");
+            (void)plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
+                                                     "rank set \"" + args[1] + "\" default");
             event.setCancelled(true);
             return;
         }
@@ -421,25 +421,25 @@ namespace primebds::handlers::preprocesses
         // Simple remap commands
         if (cmd == "ban" && args.size() > 1)
         {
-            server.dispatchCommand(sender, "permban " + args[1]);
+            (void)server.dispatchCommand(sender, "permban " + args[1]);
             event.setCancelled(true);
             return;
         }
         if ((cmd == "unban" || cmd == "pardon") && args.size() > 1)
         {
-            server.dispatchCommand(sender, "removeban " + args[1]);
+            (void)server.dispatchCommand(sender, "removeban " + args[1]);
             event.setCancelled(true);
             return;
         }
         if (cmd == "op" && args.size() > 1)
         {
-            server.dispatchCommand(sender, "rank set \"" + args[1] + "\" operator");
+            (void)server.dispatchCommand(sender, "rank set \"" + args[1] + "\" operator");
             event.setCancelled(true);
             return;
         }
         if (cmd == "deop" && args.size() > 1)
         {
-            server.dispatchCommand(sender, "rank set \"" + args[1] + "\" default");
+            (void)server.dispatchCommand(sender, "rank set \"" + args[1] + "\" default");
             event.setCancelled(true);
             return;
         }
@@ -448,9 +448,9 @@ namespace primebds::handlers::preprocesses
         if ((cmd == "allowlist" || cmd == "whitelist") && args.size() > 1)
         {
             if ((args[1] == "add" || args[1] == "remove") && args.size() > 2)
-                server.dispatchCommand(sender, "alist " + args[1] + " \"" + args[2] + "\"");
+                (void)server.dispatchCommand(sender, "alist " + args[1] + " \"" + args[2] + "\"");
             else if (args[1] == "on" || args[1] == "off" || args[1] == "list")
-                server.dispatchCommand(sender, "alist " + args[1]);
+                (void)server.dispatchCommand(sender, "alist " + args[1]);
             event.setCancelled(true);
             return;
         }
@@ -459,7 +459,7 @@ namespace primebds::handlers::preprocesses
         if (cmd == "transfer" && args.size() >= 3)
         {
             std::string port = (args.size() >= 4) ? args[3] : "19132";
-            server.dispatchCommand(sender, "send \"" + args[1] + "\" " + args[2] + " " + port);
+            (void)server.dispatchCommand(sender, "send \"" + args[1] + "\" " + args[2] + " " + port);
             event.setCancelled(true);
         }
     }

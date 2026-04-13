@@ -16,8 +16,8 @@ namespace primebds::commands
                 sender.sendMessage("This command can only be executed by a player");
                 return false;
             }
-            plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
-                                               "effect " + player->getName() + " saturation 3 255 true");
+            (void)plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
+                                                     "effect " + player->getName() + " saturation 3 255 true");
             player->sendMessage("\u00a7aYou were fed");
             return true;
         }
@@ -32,8 +32,8 @@ namespace primebds::commands
             auto *p = dynamic_cast<endstone::Player *>(t);
             if (p)
             {
-                plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
-                                                   "effect " + p->getName() + " saturation 3 255 true");
+                (void)plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
+                                                         "effect " + p->getName() + " saturation 3 255 true");
                 p->sendMessage("\u00a7aYou were fed");
             }
         }

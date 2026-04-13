@@ -128,5 +128,5 @@ if errorlevel 1 (
 echo.
 echo ============================================
 echo  Build succeeded!
-echo  Output: %BUILD_DIR%\%BUILD_TYPE%\
+echo  Output: %BUILD_DIR%\%BUILD_TYPE%\output\
 echo ============================================
