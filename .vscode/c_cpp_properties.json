@@ -9,7 +9,18 @@
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE"
-            ]
+            ],
+            "compileCommands": "${workspaceFolder}/build/windows/compile_commands.json",
+            "cppStandard": "c++20"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compileCommands": "${workspaceFolder}/build/linux/compile_commands.json",
+            "cppStandard": "c++20"
         }
     ],
     "version": 4
