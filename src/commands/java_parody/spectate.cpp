@@ -1,8 +1,29 @@
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
+#include "primebds/utils/target_selector.h"
+
+#include <algorithm>
+#include <random>
+#include <vector>
 
 namespace primebds::commands
 {
+
+    static bool is_valid_spectate_target(endstone::Player *p)
+    {
+        if (!p)
+            return false;
+        if (p->getGameMode() == endstone::GameMode::Spectator)
+            return false;
+        return true;
+    }
+
+    static void warp_player(endstone::Player *sender, endstone::Player *target)
+    {
+        sender->setGameMode(endstone::GameMode::Spectator);
+        sender->teleport(*target);
+        sender->sendMessage("\u00a7aNow spectating \u00a7e" + target->getName());
+    }
 
     static bool cmd_spectate(PrimeBDS &plugin, endstone::CommandSender &sender,
                              const std::vector<std::string> &args)
@@ -14,13 +35,23 @@ namespace primebds::commands
             return true;
         }
 
-        // Collect spectatable players (not in spectator, not matching excluded tags)
+        // Block @a selector
+        for (auto &arg : args)
+        {
+            if (arg.find("@a") != std::string::npos)
+            {
+                sender.sendMessage("\u00a7cYou cannot select all players for this command");
+                return false;
+            }
+        }
+
+        // Collect valid candidates
         std::vector<endstone::Player *> candidates;
         for (auto *p : plugin.getServer().getOnlinePlayers())
         {
             if (p == player)
                 continue;
-            if (p->getGameMode() == endstone::GameMode::Spectator)
+            if (!is_valid_spectate_target(p))
                 continue;
             candidates.push_back(p);
         }
@@ -33,37 +64,63 @@ namespace primebds::commands
 
         if (!args.empty())
         {
-            // Direct player spec
-            std::string target_name = args[0];
-            for (auto *c : candidates)
+            // Direct target via selector or name
+            auto targets = utils::getMatchingActors(plugin.getServer(), args[0], sender);
+            if (targets.empty())
             {
-                if (c->getName() == target_name)
+                sender.sendMessage("\u00a7cUnable to find target player");
+                return false;
+            }
+
+            // Shuffle and find first valid
+            std::random_device rd;
+            std::mt19937 rng(rd());
+            std::shuffle(targets.begin(), targets.end(), rng);
+
+            for (auto *t : targets)
+            {
+                auto *target = dynamic_cast<endstone::Player *>(t);
+                if (target && is_valid_spectate_target(target) && target != player)
                 {
-                    auto loc = c->getLocation();
-                    player->performCommand("tp " + std::to_string(loc.getX()) + " " +
-                                           std::to_string(loc.getY()) + " " +
-                                           std::to_string(loc.getZ()));
-                    player->sendMessage("\u00a7aSpectating \u00a7e" + c->getName());
+                    warp_player(player, target);
                     return true;
                 }
             }
-            sender.sendMessage("\u00a7cPlayer \u00a7e" + target_name + " \u00a7cnot found or not spectatable");
-            return true;
+
+            sender.sendMessage("\u00a7cNo valid players available to spectate.");
+            return false;
         }
 
-        // List spectatable players
-        sender.sendMessage("\u00a7a--- Available Players ---");
+        // No args: show form UI
+        endstone::ActionForm form;
+        form.setTitle("Spectate Menu");
+        form.setContent("Select a player to spectate!");
+
         for (auto *c : candidates)
         {
-            sender.sendMessage("\u00a77- \u00a7e" + c->getName());
+            form.addButton(c->getName());
         }
-        sender.sendMessage("\u00a77Use /spectate <player> to warp");
+
+        form.setOnSubmit([candidates](endstone::Player *p, int selection)
+                         {
+            if (selection >= 0 && selection < static_cast<int>(candidates.size()))
+            {
+                auto *target = candidates[selection];
+                if (target && is_valid_spectate_target(target))
+                {
+                    warp_player(p, target);
+                }
+                else
+                {
+                    p->sendMessage("\u00a7cThat player is no longer available.");
+                }
+            } });
+
+        player->sendForm(std::move(form));
         return true;
     }
 
     REGISTER_COMMAND(spectate, "Warp to a player to spectate them!", cmd_spectate,
-                     info.usages = {
-                         "/spectate",
-                         "/spectate <player: player>"};
+                     info.usages = {"/spectate [player: player]"};
                      info.permissions = {"primebds.command.spectate"};);
 } // namespace primebds::commands

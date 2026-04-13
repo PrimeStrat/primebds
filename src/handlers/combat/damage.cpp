@@ -44,12 +44,6 @@ namespace primebds::handlers::combat
                 event.setCancelled(true);
                 return;
             }
-            if (plugin.vanish_state.count(player->getUniqueId().str()) &&
-                plugin.vanish_state[player->getUniqueId().str()])
-            {
-                event.setCancelled(true);
-                return;
-            }
         }
 
         // Tag-based overrides
