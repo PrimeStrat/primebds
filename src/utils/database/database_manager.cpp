@@ -11,37 +11,17 @@
 namespace primebds::db
 {
 
-    std::string DatabaseManager::getDbFolder()
+    DatabaseManager::DatabaseManager(const std::string &db_path)
     {
         namespace fs = std::filesystem;
-
-        // Walk up from current working directory to find plugins/ and worlds/
-        auto current = fs::current_path();
-        while (current.has_parent_path())
-        {
-            if (fs::exists(current / "plugins") && fs::exists(current / "worlds"))
-            {
-                break;
-            }
-            auto parent = current.parent_path();
-            if (parent == current)
-                break;
-            current = parent;
-        }
-
-        auto db_folder = current / "plugins" / "primebds_data" / "database";
-        fs::create_directories(db_folder);
-        return db_folder.string();
-    }
-
-    DatabaseManager::DatabaseManager(const std::string &db_name)
-    {
-        auto folder = getDbFolder();
-        db_path_ = folder + "/" + db_name;
-        if (db_name.find(".db") == std::string::npos)
+        db_path_ = db_path;
+        if (db_path_.find(".db") == std::string::npos)
         {
             db_path_ += ".db";
         }
+
+        // Ensure parent directory exists
+        fs::create_directories(fs::path(db_path_).parent_path());
 
         int rc = sqlite3_open(db_path_.c_str(), &db_);
         if (rc != SQLITE_OK)

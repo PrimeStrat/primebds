@@ -30,6 +30,7 @@ namespace primebds::config
         // Commands config
         nlohmann::json loadCommandConfig();
         void saveCommandConfig(const nlohmann::json &config);
+        bool isCommandEnabled(const std::string &name) const;
 
         // Permissions config
         nlohmann::json loadPermissions();
@@ -44,12 +45,14 @@ namespace primebds::config
         static std::map<std::string, std::string> parsePropertiesFile(const std::string &path);
 
         // Path helpers
+        static void setDataFolder(const std::string &path);
         static std::string getDataFolder();
         static std::string getConfigPath();
 
     private:
         ConfigManager();
         nlohmann::json config_;
+        nlohmann::json command_config_;
         mutable std::mutex mutex_;
         std::string config_path_;
     };

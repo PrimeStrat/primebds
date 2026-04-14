@@ -27,6 +27,9 @@ namespace primebds
         // Ensure data directory exists
         std::filesystem::create_directories(getDataFolder());
 
+        // Point ConfigManager at Endstone's data folder
+        config::ConfigManager::setDataFolder(getDataFolder().string());
+
         // Initialise databases
         db = std::make_unique<db::UserDB>((getDataFolder() / "users.db").string());
         sldb = std::make_unique<db::SessionDB>((getDataFolder() / "sessions.db").string());
@@ -60,6 +63,9 @@ namespace primebds
 
         // Commands are declared in the ENDSTONE_PLUGIN macro body below;
         // onCommand() dispatches to our CommandRegistry handlers.
+
+        // Generate / sync commands.json
+        config::ConfigManager::instance().loadCommandConfig();
 
         // Check for inactive sessions from unclean shutdown
         checkForInactiveSessions();
@@ -100,6 +106,11 @@ namespace primebds
         auto *reg = registry.find(command.getName());
         if (reg)
         {
+            if (!config::ConfigManager::instance().isCommandEnabled(command.getName()))
+            {
+                sender.sendMessage("\u00a7cThis command is disabled.");
+                return false;
+            }
             return reg->handler(*this, sender, args);
         }
         sender.sendMessage("\u00a7cUnknown command.");

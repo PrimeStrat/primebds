@@ -3,15 +3,18 @@ set -euo pipefail
 
 # PrimeBDS Build Script for Linux
 # Requires: CMake 3.15+, Clang with libc++ (C++20 support)
+# Use --docker for glibc-compatible builds (targets Ubuntu 22.04)
 
 BUILD_DIR="build/linux"
 BUILD_TYPE="Release"
+USE_DOCKER=0
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --debug)   BUILD_TYPE="Debug";   shift ;;
         --release) BUILD_TYPE="Release"; shift ;;
+        --docker)  USE_DOCKER=1;         shift ;;
         --clean)
             echo "Cleaning build directory..."
             rm -rf "$BUILD_DIR"
@@ -34,7 +37,8 @@ while [[ $# -gt 0 ]]; do
             echo "  --debug     Build in Debug mode"
             echo "  --release   Build in Release mode (default)"
             echo "  --clean     Remove build directory before building"
-            echo "  --setup     Install Clang 18 + libc++ (run once)"
+            echo "  --docker    Build inside Ubuntu 22.04 container (glibc compatible)"
+            echo "  --setup     Install Clang 18 + libc++ (run once, native only)"
             echo "  --help      Show this help"
             exit 0
             ;;
@@ -44,6 +48,49 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Docker build path
+if [[ "$USE_DOCKER" -eq 1 ]]; then
+    if ! command -v docker &>/dev/null; then
+        echo "[ERROR] Docker not found. Install Docker to use --docker."
+        exit 1
+    fi
+
+    echo "============================================"
+    echo " PrimeBDS Docker Build - Linux ($BUILD_TYPE)"
+    echo " Target: Ubuntu 22.04 (glibc 2.35)"
+    echo "============================================"
+
+    docker build -t primebds-builder -f - . <<'DOCKERFILE'
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -y -q && \
+    apt-get install -y -q lsb-release wget software-properties-common gnupg cmake ninja-build && \
+    wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 && \
+    apt-get install -y -q libc++-18-dev libc++abi-18-dev && \
+    rm -f llvm.sh && apt-get clean
+DOCKERFILE
+
+    docker run --rm \
+        -v "$(pwd):/src" \
+        -w /src \
+        primebds-builder \
+        bash -c "
+            rm -rf $BUILD_DIR
+            CC=clang-18 CXX=clang++-18 cmake -S . -B $BUILD_DIR \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && \
+            cmake --build $BUILD_DIR --parallel \$(nproc)
+        "
+
+    echo ""
+    echo "============================================"
+    echo " Docker build succeeded!"
+    echo " Output: $BUILD_DIR/output/"
+    echo "============================================"
+    exit 0
+fi
 
 # Check for CMake
 if ! command -v cmake &>/dev/null; then

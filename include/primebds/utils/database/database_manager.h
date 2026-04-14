@@ -46,7 +46,6 @@ namespace primebds::db
 
     private:
         void bindParams(sqlite3_stmt *stmt, const std::vector<std::string> &params);
-        static std::string getDbFolder();
     };
 
 } // namespace primebds::db

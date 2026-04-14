@@ -8,32 +8,33 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
     steps:
+      - name: Install build tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update -y -q
+          apt-get install -y -q git lsb-release wget software-properties-common gnupg cmake ninja-build
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          ./llvm.sh 18
+          apt-get install -y -q libc++-18-dev libc++abi-18-dev
+          rm -f llvm.sh
+
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Set up Clang 18
-        env:
-          LLVM_VERSION: 18
-        run: |
-          sudo apt-get update -y -q
-          sudo apt-get install -y -q lsb-release wget software-properties-common gnupg
-          sudo wget https://apt.llvm.org/llvm.sh
-          sudo chmod +x llvm.sh
-          sudo ./llvm.sh ${LLVM_VERSION}
-          sudo apt-get install -y -q libc++-${LLVM_VERSION}-dev libc++abi-${LLVM_VERSION}-dev
-          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${LLVM_VERSION} 100
-          sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${LLVM_VERSION} 100
-
-      - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@latest
-
       - name: Configure
-        run: cmake -S . -B build/linux -G Ninja -DCMAKE_BUILD_TYPE=Release
+        env:
+          CC: clang-18
+          CXX: clang++-18
+        run: cmake -S . -B build/linux -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build
-        run: cmake --build build/linux
+        run: cmake --build build/linux --parallel $(nproc)
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7

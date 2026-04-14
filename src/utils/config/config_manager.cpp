@@ -3,6 +3,7 @@
 
 #include "primebds/utils/config/config_manager.h"
 #include "primebds/utils/config/config_defaults.h"
+#include "primebds/commands/command_registry.h"
 
 #include <filesystem>
 #include <fstream>
@@ -17,26 +18,31 @@ namespace primebds::config
     namespace
     {
 
-        std::string findDataFolder()
+        std::string g_data_folder;
+
+        const std::string &getDataFolderPath()
         {
-            // Walk up from cwd to find plugins/ and worlds/ dirs
-            auto current = fs::current_path();
-            while (true)
+            if (g_data_folder.empty())
             {
-                if (fs::exists(current / "plugins") && fs::exists(current / "worlds"))
+                // Fallback: walk up from cwd to find plugins/ and worlds/
+                auto current = fs::current_path();
+                while (true)
                 {
-                    auto data = current / "plugins" / "primebds_data";
-                    fs::create_directories(data);
-                    return data.string();
+                    if (fs::exists(current / "plugins") && fs::exists(current / "worlds"))
+                    {
+                        g_data_folder = (current / "plugins" / "primebds").string();
+                        break;
+                    }
+                    auto parent = current.parent_path();
+                    if (parent == current)
+                        break;
+                    current = parent;
                 }
-                auto parent = current.parent_path();
-                if (parent == current)
-                    break;
-                current = parent;
+                if (g_data_folder.empty())
+                    g_data_folder = (fs::current_path() / "plugins" / "primebds").string();
+                fs::create_directories(g_data_folder);
             }
-            auto fallback = fs::current_path() / "plugins" / "primebds_data";
-            fs::create_directories(fallback);
-            return fallback.string();
+            return g_data_folder;
         }
 
         std::string readTextFile(const std::string &path)
@@ -69,18 +75,24 @@ namespace primebds::config
 
     ConfigManager::ConfigManager()
     {
-        config_path_ = (fs::path(findDataFolder()) / "config.json").string();
+        config_path_ = (fs::path(getDataFolderPath()) / "config.json").string();
         load();
+    }
+
+    void ConfigManager::setDataFolder(const std::string &path)
+    {
+        g_data_folder = path;
+        fs::create_directories(g_data_folder);
     }
 
     std::string ConfigManager::getDataFolder()
     {
-        return findDataFolder();
+        return getDataFolderPath();
     }
 
     std::string ConfigManager::getConfigPath()
     {
-        return (fs::path(findDataFolder()) / "config.json").string();
+        return (fs::path(getDataFolderPath()) / "config.json").string();
     }
 
     void ConfigManager::load()
@@ -90,19 +102,25 @@ namespace primebds::config
         auto content = readTextFile(config_path_);
         if (content.empty())
         {
-            config_ = {{"commands", nlohmann::json::object()}, {"modules", getDefaultModules()}};
-            std::cout << "[PrimeBDS] Config file not found, using defaults.\n";
+            config_ = {{"modules", getDefaultModules()}};
+            std::cout << "[PrimeBDS] Config file not found, creating defaults at: " << config_path_ << "\n";
+            writeTextFile(config_path_, config_.dump(4));
             return;
         }
 
         try
         {
             config_ = nlohmann::json::parse(content);
+            // Remove legacy "commands" key if present (now in commands.json)
+            if (config_.contains("commands"))
+            {
+                config_.erase("commands");
+            }
         }
         catch (const nlohmann::json::exception &e)
         {
             std::cout << "[PrimeBDS] JSON error in config.json: " << e.what() << ". Using defaults.\n";
-            config_ = {{"commands", nlohmann::json::object()}, {"modules", getDefaultModules()}};
+            config_ = {{"modules", getDefaultModules()}};
         }
 
         // Ensure modules section exists with defaults for missing keys
@@ -130,8 +148,10 @@ namespace primebds::config
         {
             std::lock_guard lock(mutex_);
             config_ = {};
+            command_config_ = {};
         }
         load();
+        loadCommandConfig();
     }
 
     nlohmann::json &ConfigManager::config()
@@ -163,30 +183,85 @@ namespace primebds::config
 
     nlohmann::json ConfigManager::loadCommandConfig()
     {
-        auto path = (fs::path(findDataFolder()) / "commands.json").string();
-        auto content = readTextFile(path);
-        if (content.empty())
-            return nlohmann::json::object();
+        auto path = (fs::path(getDataFolderPath()) / "commands.json").string();
+        nlohmann::json cmd_config;
 
-        try
+        auto content = readTextFile(path);
+        if (!content.empty())
         {
-            return nlohmann::json::parse(content);
+            try
+            {
+                cmd_config = nlohmann::json::parse(content);
+            }
+            catch (...)
+            {
+                cmd_config = nlohmann::json::object();
+            }
         }
-        catch (...)
+
+        // Auto-populate entries for all registered commands
+        auto &registry = CommandRegistry::instance();
+        bool updated = false;
+        for (auto &[name, reg] : registry.commands())
         {
-            return nlohmann::json::object();
+            if (!cmd_config.contains(name))
+            {
+                cmd_config[name] = {{"enabled", true}};
+                updated = true;
+            }
         }
+
+        // Remove commands that no longer exist
+        std::vector<std::string> to_remove;
+        for (auto &[name, _] : cmd_config.items())
+        {
+            if (!registry.find(name))
+                to_remove.push_back(name);
+        }
+        for (auto &name : to_remove)
+        {
+            cmd_config.erase(name);
+            updated = true;
+        }
+
+        if (updated)
+        {
+            writeTextFile(path, cmd_config.dump(4));
+        }
+
+        // Create the file if it didn't exist
+        if (content.empty())
+        {
+            writeTextFile(path, cmd_config.dump(4));
+            std::cout << "[PrimeBDS] commands.json created at: " << path << "\n";
+        }
+
+        // Cache in memory
+        {
+            std::lock_guard lock(mutex_);
+            command_config_ = cmd_config;
+        }
+
+        return cmd_config;
+    }
+
+    bool ConfigManager::isCommandEnabled(const std::string &name) const
+    {
+        std::lock_guard lock(mutex_);
+        if (command_config_.contains(name))
+            return command_config_[name].value("enabled", true);
+        return true;
     }
 
     void ConfigManager::saveCommandConfig(const nlohmann::json &config)
     {
-        auto path = (fs::path(findDataFolder()) / "commands.json").string();
+        auto path = (fs::path(getDataFolderPath()) / "commands.json").string();
         writeTextFile(path, config.dump(4));
     }
 
     nlohmann::json ConfigManager::loadPermissions()
     {
-        auto path = (fs::path(findDataFolder()) / "permissions.json").string();
+        auto path = (fs::path(getDataFolderPath()) / "permissions.json").string();
         auto content = readTextFile(path);
         if (content.empty())
         {
@@ -225,13 +300,13 @@ namespace primebds::config
 
     void ConfigManager::savePermissions(const nlohmann::json &perms)
     {
-        auto path = (fs::path(findDataFolder()) / "permissions.json").string();
+        auto path = (fs::path(getDataFolderPath()) / "permissions.json").string();
         writeTextFile(path, perms.dump(4));
     }
 
     std::vector<std::string> ConfigManager::loadRules()
     {
-        auto path = (fs::path(findDataFolder()) / "rules.txt").string();
+        auto path = (fs::path(getDataFolderPath()) / "rules.txt").string();
         auto content = readTextFile(path);
         if (content.empty())
             return {};
@@ -253,7 +328,7 @@ namespace primebds::config
 
     void ConfigManager::saveRules(const std::vector<std::string> &rules)
     {
-        auto path = (fs::path(findDataFolder()) / "rules.txt").string();
+        auto path = (fs::path(getDataFolderPath()) / "rules.txt").string();
         std::string content;
         for (auto &r : rules)
             content += r + "\n";
