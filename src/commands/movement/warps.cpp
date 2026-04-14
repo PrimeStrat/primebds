@@ -9,7 +9,7 @@ namespace primebds::commands
     static bool cmd_warps(PrimeBDS &plugin, endstone::CommandSender &sender,
                           const std::vector<std::string> &args)
     {
-        auto *player = dynamic_cast<endstone::Player *>(&sender);
+        auto *player = sender.asPlayer();
         if (!player)
         {
             sender.sendMessage("\u00a7cOnly players can use this command.");
@@ -18,7 +18,7 @@ namespace primebds::commands
 
         if (args.empty())
         {
-            // Open warps management — list all warps
+            // Open warps management â€” list all warps
             auto warps = plugin.serverdb->getAllWarps();
             if (warps.empty())
             {

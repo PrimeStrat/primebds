@@ -17,7 +17,7 @@ namespace primebds::commands
             return false;
         }
 
-        auto *self_player = dynamic_cast<endstone::Player *>(&sender);
+        auto *self_player = sender.asPlayer();
 
         // Single arg = auto-detect fly/walk and set speed on self
         if (args.size() == 1)

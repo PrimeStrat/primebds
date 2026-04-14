@@ -10,7 +10,7 @@ namespace primebds::commands
     {
         if (args.empty())
         {
-            auto *player = dynamic_cast<endstone::Player *>(&sender);
+            auto *player = sender.asPlayer();
             if (!player)
             {
                 sender.sendMessage("\u00a7cOnly players can use this command.");

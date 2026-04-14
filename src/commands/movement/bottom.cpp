@@ -7,7 +7,7 @@ namespace primebds::commands
     static bool cmd_bottom(PrimeBDS &plugin, endstone::CommandSender &sender,
                            const std::vector<std::string> &args)
     {
-        auto *player = dynamic_cast<endstone::Player *>(&sender);
+        auto *player = sender.asPlayer();
         if (!player)
         {
             sender.sendMessage("\u00a7cOnly players can use this command.");
