@@ -121,27 +121,49 @@ namespace primebds::commands
         }
 
         std::string player_name = player->getName();
-        std::string mode = (!args.empty()) ? args[0] : "server";
+        bool is_active = plugin.monitor_intervals.count(player_name) > 0;
 
-        // If already monitoring, cancel existing
-        auto it = plugin.monitor_intervals.find(player_name);
-        if (it != plugin.monitor_intervals.end())
+        // Resolve desired state: explicit arg overrides, otherwise toggle
+        bool want_on;
+        if (!args.empty())
         {
-            auto &scheduler = plugin.getServer().getScheduler();
-            scheduler.cancelTask(it->second);
-            plugin.monitor_intervals.erase(it);
+            std::string arg = args[0];
+            for (auto &c : arg)
+                c = static_cast<char>(std::tolower(c));
 
-            if (mode == "disable" || args.empty())
-            {
-                sender.sendMessage("\u00a7cMonitoring turned off");
-                return true;
-            }
-            sender.sendMessage("\u00a7ePrevious monitoring canceled, applying new settings...");
+            if (arg == "true" || arg == "on" || arg == "1" || arg == "enable" || arg == "server")
+                want_on = true;
+            else if (arg == "false" || arg == "off" || arg == "0" || arg == "disable")
+                want_on = false;
+            else
+                want_on = !is_active;
         }
-        else if (mode == "disable")
+        else
         {
-            sender.sendMessage("\u00a7cMonitoring is not active.");
+            want_on = !is_active;
+        }
+
+        // Disable
+        if (!want_on)
+        {
+            if (is_active)
+            {
+                plugin.getServer().getScheduler().cancelTask(plugin.monitor_intervals[player_name]);
+                plugin.monitor_intervals.erase(player_name);
+                sender.sendMessage("\u00a7cMonitoring turned off");
+            }
+            else
+            {
+                sender.sendMessage("\u00a7cMonitoring is not active");
+            }
             return true;
+        }
+
+        // If already active, cancel first then restart
+        if (is_active)
+        {
+            plugin.getServer().getScheduler().cancelTask(plugin.monitor_intervals[player_name]);
+            plugin.monitor_intervals.erase(player_name);
         }
 
         // Schedule repeating task (every 20 ticks = 1 second)
@@ -151,7 +173,7 @@ namespace primebds::commands
             {
                 monitor_tick(plugin, player_name);
             },
-            0, 20);
+            0, 5);
 
         if (task)
         {
@@ -167,6 +189,6 @@ namespace primebds::commands
     }
 
     REGISTER_COMMAND(monitor, "Monitor server performance in real time!", cmd_monitor,
-                     info.usages = {"/monitor (server|disable)"};
+                     info.usages = {"/monitor [enable: bool]"};
                      info.permissions = {"primebds.command.monitor"};);
 } // namespace primebds::commands

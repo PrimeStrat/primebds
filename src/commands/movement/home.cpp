@@ -1,13 +1,41 @@
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
+#include <algorithm>
 #include <ctime>
 #include <map>
+#include <string>
 
 namespace primebds::commands
 {
 
     static std::map<std::string, double> home_cooldowns;
+
+    /// Parse the max home count from a player's permissions (primebds.homes.N).
+    /// Returns -1 for unlimited (primebds.homes.exempt).
+    static int getMaxHomes(endstone::Player *player)
+    {
+        if (player->hasPermission("primebds.homes.exempt"))
+            return -1;
+
+        int max_homes = 1;
+        for (auto *perm : player->getEffectivePermissions())
+        {
+            auto name = perm->getPermission();
+            if (name.rfind("primebds.homes.", 0) == 0 && name != "primebds.homes.exempt")
+            {
+                try
+                {
+                    int n = std::stoi(name.substr(name.rfind('.') + 1));
+                    max_homes = std::max(max_homes, n);
+                }
+                catch (...)
+                {
+                }
+            }
+        }
+        return max_homes;
+    }
 
     static bool cmd_home(PrimeBDS &plugin, endstone::CommandSender &sender,
                          const std::vector<std::string> &args)
@@ -19,10 +47,24 @@ namespace primebds::commands
             return true;
         }
 
+        auto settings = plugin.serverdb->getHomeSettings();
+        bool exempt_cooldown = player->hasPermission("primebds.exempt.home.cooldowns");
+
+        double now = static_cast<double>(std::time(nullptr));
+        double last_used = home_cooldowns.count(player->getXuid()) ? home_cooldowns[player->getXuid()] : 0;
+
+        if (!exempt_cooldown && settings.cooldown > 0 && (now - last_used) < settings.cooldown)
+        {
+            double remaining = settings.cooldown - (now - last_used);
+            char buf[64];
+            std::snprintf(buf, sizeof(buf), "%.1f", remaining);
+            sender.sendMessage("\u00a7cYou must wait " + std::string(buf) + "s before using /home again");
+            return true;
+        }
+
         std::string sub = (!args.empty()) ? args[0] : "";
-        // Normalize sub to lowercase
         for (auto &c : sub)
-            c = (char)std::tolower(c);
+            c = static_cast<char>(std::tolower(c));
 
         auto homes = plugin.serverdb->getAllHomes(player->getName(), player->getXuid());
 
@@ -36,16 +78,25 @@ namespace primebds::commands
             }
             auto &first = homes.begin()->second;
             auto pos = db::ServerDB::decodeLocation(first.pos);
-            player->performCommand("tp " + std::to_string(pos["x"].get<double>()) + " " +
-                                   std::to_string(pos["y"].get<double>()) + " " +
-                                   std::to_string(pos["z"].get<double>()));
+            player->teleport(endstone::Location(
+                player->getDimension(),
+                pos["x"].get<double>(), pos["y"].get<double>(), pos["z"].get<double>()));
             player->sendMessage("\u00a7aWarped to \u00a7e" + homes.begin()->first);
+            home_cooldowns[player->getXuid()] = now;
             return true;
         }
 
         if (sub == "set")
         {
             std::string name = (args.size() >= 2) ? args[1] : "Home";
+
+            int max_homes = getMaxHomes(player);
+            if (max_homes >= 0 && static_cast<int>(homes.size()) >= max_homes)
+            {
+                sender.sendMessage("\u00a7cYou can only have " + std::to_string(max_homes) + " homes");
+                return true;
+            }
+
             auto loc = player->getLocation();
             std::string pos_json = db::ServerDB::encodeLocation(
                 loc.getX(), loc.getY(), loc.getZ(),
@@ -53,11 +104,11 @@ namespace primebds::commands
 
             if (plugin.serverdb->createHome(player->getXuid(), player->getName(), name, pos_json))
             {
-                sender.sendMessage("\u00a7aHome \u00a7e" + name + " \u00a7aset!");
+                sender.sendMessage("\u00a7e" + name + " \u00a7aset successfully at your current location");
             }
             else
             {
-                sender.sendMessage("\u00a7cHome \u00a7e" + name + " \u00a7calready exists");
+                sender.sendMessage("\u00a7e" + name + " \u00a7calready exists");
             }
             return true;
         }
@@ -66,14 +117,15 @@ namespace primebds::commands
         {
             if (homes.empty())
             {
-                sender.sendMessage("\u00a7cYou have no homes");
+                sender.sendMessage("\u00a7cYou have no homes set");
                 return true;
             }
-            sender.sendMessage("\u00a7aYour homes:");
+            std::string msg = "\u00a7aYour homes:\n";
             for (auto &[name, home] : homes)
             {
-                sender.sendMessage("\u00a77- \u00a7b" + name);
+                msg += "\u00a77- \u00a7b" + name + "\n";
             }
+            sender.sendMessage(msg);
             return true;
         }
 
@@ -87,15 +139,14 @@ namespace primebds::commands
                 return true;
             }
             auto pos = db::ServerDB::decodeLocation(it->second.pos);
-            player->performCommand("tp " + std::to_string(pos["x"].get<double>()) + " " +
-                                   std::to_string(pos["y"].get<double>()) + " " +
-                                   std::to_string(pos["z"].get<double>()));
+            player->teleport(endstone::Location(
+                player->getDimension(),
+                pos["x"].get<double>(), pos["y"].get<double>(), pos["z"].get<double>()));
             player->sendMessage("\u00a7aWarped to \u00a7e" + name);
-            home_cooldowns[player->getXuid()] = (double)std::time(nullptr);
+            home_cooldowns[player->getXuid()] = now;
             return true;
         }
 
-        // FIX: Accept both "del" and "delete"
         if ((sub == "del" || sub == "delete") && args.size() >= 2)
         {
             std::string name = args[1];
@@ -112,15 +163,17 @@ namespace primebds::commands
 
         if (sub == "max")
         {
-            sender.sendMessage("\u00a7aYou currently have \u00a7e" + std::to_string(homes.size()) + " \u00a7ahomes");
+            int max_homes = getMaxHomes(player);
+            std::string max_str = (max_homes < 0) ? "unlimited" : std::to_string(max_homes);
+            sender.sendMessage("\u00a7aYou can have up to \u00a7e" + max_str + " \u00a7ahomes");
             return true;
         }
 
-        sender.sendMessage("\u00a7cInvalid usage. /home [set/list/warp/del/delete]");
+        sender.sendMessage("\u00a7cInvalid usage. /home [set/list/warp/del/delete/max]");
         return false;
     }
 
-    REGISTER_COMMAND(home, "Manage your homes!", cmd_home,
+    REGISTER_COMMAND(home, "Manage and warp to homes!", cmd_home,
                      info.usages = {
                          "/home",
                          "/home (set) [name: string]",

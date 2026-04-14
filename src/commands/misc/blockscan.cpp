@@ -112,21 +112,48 @@ namespace primebds::commands
         }
 
         std::string name = player->getName();
+        bool is_active = plugin.blockscan_intervals.count(name) > 0;
 
-        // Toggle off if already active
-        auto it = plugin.blockscan_intervals.find(name);
-        if (it != plugin.blockscan_intervals.end())
+        // Resolve desired state: explicit arg overrides, otherwise toggle
+        bool want_on;
+        if (!args.empty())
         {
-            plugin.getServer().getScheduler().cancelTask(it->second);
-            plugin.blockscan_intervals.erase(it);
-            sender.sendMessage("\u00a7cBlock scanning disabled");
+            std::string arg = args[0];
+            for (auto &c : arg)
+                c = static_cast<char>(std::tolower(c));
+
+            if (arg == "true" || arg == "on" || arg == "1" || arg == "enable")
+                want_on = true;
+            else if (arg == "false" || arg == "off" || arg == "0" || arg == "disable")
+                want_on = false;
+            else
+                want_on = !is_active; // fallback to toggle
+        }
+        else
+        {
+            want_on = !is_active;
+        }
+
+        // Disable
+        if (!want_on)
+        {
+            if (is_active)
+            {
+                plugin.getServer().getScheduler().cancelTask(plugin.blockscan_intervals[name]);
+                plugin.blockscan_intervals.erase(name);
+                sender.sendMessage("\u00a7cBlock scanning disabled");
+            }
+            else
+            {
+                sender.sendMessage("\u00a7cBlock scanning is not active");
+            }
             return true;
         }
 
-        // Check for explicit disable arg
-        if (!args.empty() && args[0] == "disable")
+        // Enable (no-op if already running)
+        if (is_active)
         {
-            sender.sendMessage("\u00a7cBlock scanning is not active");
+            sender.sendMessage("\u00a7eBlock scanning is already active");
             return true;
         }
 
@@ -152,6 +179,6 @@ namespace primebds::commands
     }
 
     REGISTER_COMMAND(blockscan, "Continuously show information about the block you're looking at.", cmd_blockscan,
-                     info.usages = {"/blockscan (disable)"};
+                     info.usages = {"/blockscan [enable: bool]"};
                      info.permissions = {"primebds.command.blockscan"};);
 } // namespace primebds::commands
