@@ -159,7 +159,7 @@ namespace primebds::commands {
                 auto warnings = plugin.db->getWarnings(u.xuid);
                 // Find latest active warning (warn_time > now or warn_time <= 0 for permanent)
                 int64_t now = static_cast<int64_t>(std::time(nullptr));
-                const Warn *active_warn = nullptr;
+                const db::Warn *active_warn = nullptr;
                 for (auto &w : warnings) {
                     if (w.warn_time <= 0 || w.warn_time > now) {
                         active_warn = &w;
