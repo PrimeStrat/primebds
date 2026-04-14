@@ -84,6 +84,15 @@ DOCKERFILE
             cmake --build $BUILD_DIR --parallel \$(nproc)
         "
 
+    # Verify GLIBC requirements of built binary
+    MAX_GLIBC=$(objdump -T "$BUILD_DIR/output/"*.so 2>/dev/null \
+        | grep -oP 'GLIBC_\K[0-9.]+' | sort -V -u | tail -1)
+    echo ""
+    echo "Max GLIBC requirement: GLIBC_${MAX_GLIBC:-unknown}"
+    if [[ -n "$MAX_GLIBC" ]] && [[ "$(printf '%s\n' "2.35" "$MAX_GLIBC" | sort -V | tail -1)" != "2.35" ]]; then
+        echo "[WARNING] Binary requires GLIBC_${MAX_GLIBC} (> 2.35). May fail on older hosts."
+    fi
+
     echo ""
     echo "============================================"
     echo " Docker build succeeded!"
@@ -141,6 +150,16 @@ CC="$CLANG_CC" CXX="$CLANG_CXX" cmake -S . -B "$BUILD_DIR" \
 NPROC=$(nproc 2>/dev/null || echo 4)
 echo "[2/2] Building with $NPROC jobs..."
 cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" --parallel "$NPROC"
+
+# Verify GLIBC requirements of built binary
+MAX_GLIBC=$(objdump -T "$BUILD_DIR/output/"*.so 2>/dev/null \
+    | grep -oP 'GLIBC_\K[0-9.]+' | sort -V -u | tail -1)
+echo ""
+echo "Max GLIBC requirement: GLIBC_${MAX_GLIBC:-unknown}"
+if [[ -n "$MAX_GLIBC" ]] && [[ "$(printf '%s\n' "2.35" "$MAX_GLIBC" | sort -V | tail -1)" != "2.35" ]]; then
+    echo "[WARNING] Binary requires GLIBC_${MAX_GLIBC} (> 2.35). May fail on older hosting environments."
+    echo "          Use './build.sh --docker' to build with glibc 2.35 (Ubuntu 22.04)."
+fi
 
 echo ""
 echo "============================================"

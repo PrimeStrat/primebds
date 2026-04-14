@@ -1,5 +1,11 @@
 {
     "python.analysis.extraPaths": [
         "./src/endstone_primebds/utils"
+    ],
+    "C_Cpp.fileAssociations": [
+        {
+            "pattern": "**/src/glibc_compat.cpp",
+            "configuration": "Linux"
+        }
     ]
 }

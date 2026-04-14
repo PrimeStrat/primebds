@@ -37,6 +37,15 @@ jobs:
       - name: Build
         run: cmake --build build/linux --parallel $(nproc)
 
+      - name: Verify GLIBC compatibility
+        run: |
+          MAX_GLIBC=$(objdump -T build/linux/output/*.so | grep -oP 'GLIBC_\K[0-9.]+' | sort -V -u | tail -1)
+          echo "Max GLIBC requirement: GLIBC_${MAX_GLIBC}"
+          if [ "$(printf '%s\n' '2.35' "$MAX_GLIBC" | sort -V | tail -1)" != '2.35' ]; then
+            echo "::error::Binary requires GLIBC_${MAX_GLIBC} (> 2.35). Will fail on older hosting environments."
+            exit 1
+          fi
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:

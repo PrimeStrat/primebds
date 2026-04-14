@@ -11,6 +11,16 @@ set(ENDSTONE_API_VERSION "0.11" CACHE STRING "Endstone API version")
 
 include(FetchContent)
 
+# Pin fmt to 10.2.1 BEFORE endstone fetches it (endstone defaults to fmt 11.2.0,
+# which uses C23 glibc symbol redirects like __isoc23_strtol on glibc 2.38+ systems,
+# causing GLIBC_2.38 runtime requirements that break older hosting environments)
+FetchContent_Declare(
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG 10.2.1
+)
+FetchContent_MakeAvailable(fmt)
+
 # Endstone framework
 FetchContent_Declare(
     endstone
