@@ -227,11 +227,11 @@ namespace primebds {
         auto rank_lower = internal_rank;
         std::transform(rank_lower.begin(), rank_lower.end(), rank_lower.begin(), ::tolower);
         if (rank_lower == "operator" && !player.isOp() && player.isValid()) {
-            getServer().dispatchCommand(getServer().getCommandSender(),
-                                        "op \"" + user->name + "\"");
+            (void)getServer().dispatchCommand(getServer().getCommandSender(),
+                                              "op \"" + user->name + "\"");
         } else if (rank_lower != "operator" && player.isOp() && player.isValid()) {
-            getServer().dispatchCommand(getServer().getCommandSender(),
-                                        "deop \"" + user->name + "\"");
+            (void)getServer().dispatchCommand(getServer().getCommandSender(),
+                                              "deop \"" + user->name + "\"");
         }
 
         player.updateCommands();
