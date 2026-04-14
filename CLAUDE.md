@@ -5,7 +5,7 @@ An all-in-one essentials plugin for the Endstone mod loader.
 ## Code Style
 
 ### C++ (clang-format + clang-tidy)
-- Based on Microsoft style with Stroustrup braces
+- Based on K&R/1TBS styling
 - Naming conventions (from .clang-tidy):
     - Classes/Structs/Enums: CamelCase
     - Methods: camelBack
@@ -15,11 +15,6 @@ An all-in-one essentials plugin for the Endstone mod loader.
 - Document code above each function
 - Important configuration per command should be registered near the top
 - Avoid inline comments for obvious actions and keep to simple 1-line comments for functions unless the function is too long or too complex
-- Do not tab the "{" in functions, format brackets like:
-    function {
-
-    }
-    and keep that consistent with all files
 
 ## Mod Loader
 - GitHub: https://github.com/EndstoneMC/endstone
