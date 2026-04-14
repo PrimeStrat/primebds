@@ -214,7 +214,8 @@ namespace primebds::permissions {
 
         auto xuid = player.getXuid();
 
-        // Check cache first {
+        // Check cache first
+        {
             std::lock_guard lock(mutex_);
             auto it = perm_cache_.find(xuid);
             if (it != perm_cache_.end()) {

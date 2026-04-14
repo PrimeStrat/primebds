@@ -197,7 +197,8 @@ namespace primebds::config {
             std::cout << "[PrimeBDS] commands.json created at: " << path << "\n";
         }
 
-        // Cache in memory {
+        // Cache in memory
+        {
             std::lock_guard lock(mutex_);
             command_config_ = cmd_config;
         }

@@ -124,7 +124,7 @@ namespace primebds::commands {
                 }
             }
 
-            server.dispatchCommand(server.getCommandSender(), "whitelist add \"" + player_name + "\"");
+            (void)server.dispatchCommand(server.getCommandSender(), "whitelist add \"" + player_name + "\"");
             sender.sendMessage("\u00a7rAdded \u00a7b" + player_name + "\u00a7r to allowlist.");
 
             if (ignore_limit.has_value()) {
@@ -163,7 +163,7 @@ namespace primebds::commands {
                 }
             }
 
-            server.dispatchCommand(server.getCommandSender(), "whitelist reload");
+            (void)server.dispatchCommand(server.getCommandSender(), "whitelist reload");
             return true;
         }
 
@@ -173,9 +173,9 @@ namespace primebds::commands {
                 return true;
             }
             std::string player_name = args[1];
-            server.dispatchCommand(server.getCommandSender(), "whitelist remove \"" + player_name + "\"");
+            (void)server.dispatchCommand(server.getCommandSender(), "whitelist remove \"" + player_name + "\"");
             sender.sendMessage("\u00a7rRemoved \u00a7b" + player_name + "\u00a7r from allowlist.");
-            server.dispatchCommand(server.getCommandSender(), "whitelist reload");
+            (void)server.dispatchCommand(server.getCommandSender(), "whitelist reload");
             return true;
         }
 
@@ -298,7 +298,7 @@ namespace primebds::commands {
             try {
                 fs::copy_file(target_path, allowlist_path, fs::copy_options::overwrite_existing);
                 plugin.serverdb->updateServerInfo("allowlist_profile", target_profile);
-                server.dispatchCommand(server.getCommandSender(), "whitelist reload");
+                (void)server.dispatchCommand(server.getCommandSender(), "whitelist reload");
                 sender.sendMessage("Activated allowlist profile '" + target_profile + "'");
             } catch (const std::exception &e) {
                 sender.sendMessage("\u00a7cFailed to switch profile: " + std::string(e.what()));
@@ -371,7 +371,7 @@ namespace primebds::commands {
                 auto current_profile = plugin.serverdb->getServerInfo().allowlist_profile;
                 if (current_profile == child_name) {
                     writeJsonFile(getAllowlistPath(plugin), child_data);
-                    server.dispatchCommand(server.getCommandSender(), "whitelist reload");
+                    (void)server.dispatchCommand(server.getCommandSender(), "whitelist reload");
                     sender.sendMessage("Updated live allowlist.json and reloaded whitelist for active profile '" +
                                        child_name + "'");
                 }
@@ -405,7 +405,7 @@ namespace primebds::commands {
             for (auto &entry : data) {
                 std::string name = entry.value("name", "");
                 if (!name.empty())
-                    server.dispatchCommand(server.getCommandSender(), "whitelist remove \"" + name + "\"");
+                    (void)server.dispatchCommand(server.getCommandSender(), "whitelist remove \"" + name + "\"");
             }
 
             writeJsonFile(target_path, json::array());
@@ -413,7 +413,7 @@ namespace primebds::commands {
             auto current_profile = plugin.serverdb->getServerInfo().allowlist_profile;
             if (current_profile == target_profile) {
                 writeJsonFile(getAllowlistPath(plugin), json::array());
-                server.dispatchCommand(server.getCommandSender(), "whitelist reload");
+                (void)server.dispatchCommand(server.getCommandSender(), "whitelist reload");
                 sender.sendMessage("Cleared and reloaded active profile '" + target_profile + "'");
             } else {
                 sender.sendMessage("Cleared profile '" + target_profile + "'");
