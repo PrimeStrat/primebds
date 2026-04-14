@@ -504,7 +504,7 @@ namespace primebds::db {
     }
 
     std::vector<ModLog> UserDB::getMutedUsers() {
-        auto rows = query("SELECT * FROM mod_log WHERE is_muted = 1");
+        auto rows = query("SELECT * FROM mod_logs WHERE is_muted = 1");
         std::vector<ModLog> result;
         for (auto &r : rows) {
             ModLog m;
@@ -519,7 +519,7 @@ namespace primebds::db {
     }
 
     std::vector<ModLog> UserDB::getBannedUsers() {
-        auto rows = query("SELECT * FROM mod_log WHERE is_banned = 1");
+        auto rows = query("SELECT * FROM mod_logs WHERE is_banned = 1");
         std::vector<ModLog> result;
         for (auto &r : rows) {
             ModLog m;
@@ -534,7 +534,7 @@ namespace primebds::db {
     }
 
     std::vector<ModLog> UserDB::getIPBannedUsers() {
-        auto rows = query("SELECT * FROM mod_log WHERE is_ip_banned = 1");
+        auto rows = query("SELECT * FROM mod_logs WHERE is_ip_banned = 1");
         std::vector<ModLog> result;
         for (auto &r : rows) {
             ModLog m;
