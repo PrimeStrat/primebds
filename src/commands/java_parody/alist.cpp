@@ -10,6 +10,10 @@
 #include <set>
 
 namespace fs = std::filesystem;
+using json = nlohmann::json;
+
+namespace primebds::commands {
+
     static bool cmd_alist(PrimeBDS &, endstone::CommandSender &,
                         const std::vector<std::string> &);
 
@@ -20,10 +24,6 @@ namespace fs = std::filesystem;
                          "/alist (create|use|delete|clear) <name: string>",
                          "/alist (inherit) <child: string> <parent: string>"};
                      info.permissions = {"primebds.command.alist"}; info.aliases = {"wlist"};);
-
-using json = nlohmann::json;
-
-namespace primebds::commands {
 
     /// Gets the path to the active allowlist.json in the BDS server root
     static fs::path getAllowlistPath(PrimeBDS &plugin) {
