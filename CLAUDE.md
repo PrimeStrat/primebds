@@ -14,6 +14,7 @@ An all-in-one essentials plugin for the Endstone mod loader.
     - Macros: UPPER_CASE
 - Document code above each function
 - Important configuration per command should be registered near the top
+- Avoid inline comments for obvious actions and keep to simple 1-line comments for functions unless the function is too long or too complex
 - Do not tab the "{" in functions, format brackets like:
     function {
 
