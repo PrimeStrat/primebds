@@ -1,3 +1,6 @@
+/// @file blockscan.cpp
+/// Continuously show information about the block you're looking at.
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
@@ -6,17 +9,20 @@
 #include <string>
 #include <variant>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
-    static void blockscan_tick(PrimeBDS &plugin, const std::string &player_name)
-    {
+    static bool cmd_blockscan(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(blockscan, "Continuously show information about the block you're looking at.", cmd_blockscan,
+                     info.usages = {"/blockscan [enable: bool]"};
+                     info.permissions = {"primebds.command.blockscan"};);
+
+    static void blockscan_tick(PrimeBDS &plugin, const std::string &player_name) {
         auto *player = plugin.getServer().getPlayer(player_name);
-        if (!player)
-        {
+        if (!player) {
             auto it = plugin.blockscan_intervals.find(player_name);
-            if (it != plugin.blockscan_intervals.end())
-            {
+            if (it != plugin.blockscan_intervals.end()) {
                 plugin.getServer().getScheduler().cancelTask(it->second);
                 plugin.blockscan_intervals.erase(it);
             }
@@ -39,35 +45,27 @@ namespace primebds::commands
         constexpr double max_distance = 6.0;
         constexpr double step = 0.2;
 
-        for (double d = 0.0; d <= max_distance; d += step)
-        {
+        for (double d = 0.0; d <= max_distance; d += step) {
             int bx = static_cast<int>(std::floor(eye_x + dir_x * d));
             int by = static_cast<int>(std::floor(eye_y + dir_y * d));
             int bz = static_cast<int>(std::floor(eye_z + dir_z * d));
 
             auto block = dim.getBlockAt(bx, by, bz);
-            if (block && block->getType() != "minecraft:air")
-            {
+            if (block && block->getType() != "minecraft:air") {
                 auto bl = block->getLocation();
                 auto data = block->getData();
                 std::string block_type = block->getType();
 
                 // Build states text
                 std::string states_text;
-                if (data)
-                {
+                if (data) {
                     auto states = data->getBlockStates();
-                    if (states.empty())
-                    {
+                    if (states.empty()) {
                         states_text = "  \u00a77- (none)";
-                    }
-                    else
-                    {
-                        for (auto &[key, val] : states)
-                        {
+                    } else {
+                        for (auto &[key, val] : states) {
                             states_text += "  \u00a77- \u00a7f" + key + " = ";
-                            std::visit([&states_text](auto &&v)
-                                       {
+                            std::visit([&states_text](auto &&v) {
                                 using T = std::decay_t<decltype(v)>;
                                 if constexpr (std::is_same_v<T, bool>)
                                     states_text += v ? "true" : "false";
@@ -101,12 +99,11 @@ namespace primebds::commands
         player->sendTip("\u00a7cNo block in sight");
     }
 
+    /// Continuously show information about the block you're looking at.
     static bool cmd_blockscan(PrimeBDS &plugin, endstone::CommandSender &sender,
-                              const std::vector<std::string> &args)
-    {
+                              const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
@@ -116,8 +113,7 @@ namespace primebds::commands
 
         // Resolve desired state: explicit arg overrides, otherwise toggle
         bool want_on;
-        if (!args.empty())
-        {
+        if (!args.empty()) {
             std::string arg = args[0];
             for (auto &c : arg)
                 c = static_cast<char>(std::tolower(c));
@@ -128,31 +124,24 @@ namespace primebds::commands
                 want_on = false;
             else
                 want_on = !is_active; // fallback to toggle
-        }
-        else
-        {
+        } else {
             want_on = !is_active;
         }
 
         // Disable
-        if (!want_on)
-        {
-            if (is_active)
-            {
+        if (!want_on) {
+            if (is_active) {
                 plugin.getServer().getScheduler().cancelTask(plugin.blockscan_intervals[name]);
                 plugin.blockscan_intervals.erase(name);
                 sender.sendMessage("\u00a7cBlock scanning disabled");
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("\u00a7cBlock scanning is not active");
             }
             return true;
         }
 
         // Enable (no-op if already running)
-        if (is_active)
-        {
+        if (is_active) {
             sender.sendMessage("\u00a7eBlock scanning is already active");
             return true;
         }
@@ -160,25 +149,18 @@ namespace primebds::commands
         // Schedule repeating task every 10 ticks (0.5s)
         auto task = plugin.getServer().getScheduler().runTaskTimer(
             plugin,
-            [&plugin, name]()
-            {
+            [&plugin, name]() {
                 blockscan_tick(plugin, name);
             },
             0, 10);
 
-        if (task)
-        {
+        if (task) {
             plugin.blockscan_intervals[name] = task->getTaskId();
             sender.sendMessage("\u00a7aBlock scanning enabled");
-        }
-        else
-        {
+        } else {
             sender.sendMessage("\u00a7cFailed to start block scanning task");
         }
         return true;
     }
 
-    REGISTER_COMMAND(blockscan, "Continuously show information about the block you're looking at.", cmd_blockscan,
-                     info.usages = {"/blockscan [enable: bool]"};
-                     info.permissions = {"primebds.command.blockscan"};);
 } // namespace primebds::commands

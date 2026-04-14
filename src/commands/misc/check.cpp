@@ -1,3 +1,6 @@
+/// @file check.cpp
+/// Checks a player's client info!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/time.h"
@@ -6,12 +9,19 @@
 #include <ctime>
 #include <string>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
+
+    static bool cmd_check(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(check, "Checks a player's client info!", cmd_check,
+                     info.usages = {"/check <player: player> (info|mod|network|world)[info: info]"};
+                     info.permissions = {"primebds.command.check"};
+                     info.default_permission = "op";
+                     info.aliases = {"seen"};);
 
     /// Formats a unix timestamp expiry into a human-readable remaining time string
-    static std::string formatTimeRemaining(int64_t expiry_time)
-    {
+    static std::string formatTimeRemaining(int64_t expiry_time) {
         if (expiry_time <= 0)
             return "Permanent";
 
@@ -34,10 +44,8 @@ namespace primebds::commands
     }
 
     /// Converts a GameMode enum to a display name
-    static std::string gameModeName(endstone::GameMode mode)
-    {
-        switch (mode)
-        {
+    static std::string gameModeName(endstone::GameMode mode) {
+        switch (mode) {
         case endstone::GameMode::Survival:
             return "Survival";
         case endstone::GameMode::Creative:
@@ -51,19 +59,16 @@ namespace primebds::commands
         }
     }
 
+    /// Checks a player's client info!
     static bool cmd_check(PrimeBDS &plugin, endstone::CommandSender &sender,
-                          const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                          const std::vector<std::string> &args) {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /check <player> [info|mod|network|world]");
             return false;
         }
 
-        for (auto &arg : args)
-        {
-            if (arg.find('@') != std::string::npos)
-            {
+        for (auto &arg : args) {
+            if (arg.find('@') != std::string::npos) {
                 sender.sendMessage("\u00a7cTarget selectors are invalid for this command");
                 return false;
             }
@@ -75,8 +80,7 @@ namespace primebds::commands
             player_name = player_name.substr(1, player_name.size() - 2);
 
         std::string filter = "info";
-        if (args.size() > 1)
-        {
+        if (args.size() > 1) {
             filter = args[1];
             for (auto &c : filter)
                 c = static_cast<char>(std::tolower(c));
@@ -85,8 +89,7 @@ namespace primebds::commands
         auto *target = plugin.getServer().getPlayer(player_name);
         auto user = plugin.db->getUserByName(player_name);
 
-        if (!user.has_value() && !target)
-        {
+        if (!user.has_value() && !target) {
             sender.sendMessage("Player \u00a7e" + player_name + "\u00a7c not found in database.");
             return false;
         }
@@ -104,8 +107,7 @@ namespace primebds::commands
         if (u.last_leave > 946684800) // year 2000 sanity check
             leave_time = utils::convertToTimezone(u.last_leave, "EST");
 
-        if (filter == "info")
-        {
+        if (filter == "info") {
             std::string msg = "\u00a7bPlayer Database Information:\n";
             msg += "\u00a77- \u00a7eName: \u00a7f" + u.name + " \u00a78[" + status + "\u00a78]\n";
             msg += "\u00a77- \u00a7eXUID: \u00a7f" + u.xuid + "\n";
@@ -119,21 +121,17 @@ namespace primebds::commands
             msg += "\u00a77- \u00a7eLast Join: \u00a7f" + join_time + "\n";
             msg += "\u00a77- \u00a7eLast Leave: \u00a7f" + leave_time;
             sender.sendMessage(msg);
-        }
-        else if (filter == "mod")
-        {
+        } else if (filter == "mod") {
             auto mod = plugin.db->getModLog(u.xuid);
             std::string msg = "\u00a76Player Mod Information:\n";
             msg += "\u00a77- \u00a7eName: \u00a7f" + u.name + " \u00a78[" + status + "\u00a78]\n";
             msg += "\u00a77- \u00a7eRank: \u00a7f" + u.internal_rank + "\n";
 
-            if (mod.has_value())
-            {
+            if (mod.has_value()) {
                 // Ban status
                 msg += "\u00a77- \u00a7eBanned: \u00a7f" + std::string(mod->is_banned ? "true" : "false") +
                        " \u00a78[\u00a77IP: " + std::string(mod->is_ip_banned ? "true" : "false") + "\u00a78]\n";
-                if (mod->is_banned)
-                {
+                if (mod->is_banned) {
                     msg += "\u00a77  - \u00a7eBan Reason: \u00a7f" + mod->ban_reason + "\n";
                     msg += "\u00a77  - \u00a7eBan Expires: \u00a7f" + formatTimeRemaining(mod->banned_time) + "\n";
                 }
@@ -141,11 +139,9 @@ namespace primebds::commands
                 // Name ban status
                 bool name_banned = plugin.serverdb->checkNameBan(u.name);
                 msg += "\u00a77- \u00a7eName Banned: \u00a7f" + std::string(name_banned ? "true" : "false") + "\n";
-                if (name_banned)
-                {
+                if (name_banned) {
                     auto name_ban = plugin.serverdb->getNameBanInfo(u.name);
-                    if (name_ban.has_value())
-                    {
+                    if (name_ban.has_value()) {
                         msg += "\u00a77  - \u00a7eBan Reason: \u00a7f" + name_ban->ban_reason + "\n";
                         msg += "\u00a77  - \u00a7eBan Expires: \u00a7f" + formatTimeRemaining(name_ban->banned_time) + "\n";
                     }
@@ -154,8 +150,7 @@ namespace primebds::commands
                 // Mute status
                 msg += "\u00a77- \u00a7eMuted: \u00a7f" + std::string(mod->is_muted ? "true" : "false") +
                        " \u00a78[\u00a77IP: " + std::string(mod->is_ip_muted ? "true" : "false") + "\u00a78]\n";
-                if (mod->is_muted)
-                {
+                if (mod->is_muted) {
                     msg += "\u00a77  - \u00a7eMute Reason: \u00a7f" + mod->mute_reason + "\n";
                     msg += "\u00a77  - \u00a7eMute Expires: \u00a7f" + formatTimeRemaining(mod->mute_time) + "\n";
                 }
@@ -165,32 +160,24 @@ namespace primebds::commands
                 // Find latest active warning (warn_time > now or warn_time <= 0 for permanent)
                 int64_t now = static_cast<int64_t>(std::time(nullptr));
                 const Warn *active_warn = nullptr;
-                for (auto &w : warnings)
-                {
-                    if (w.warn_time <= 0 || w.warn_time > now)
-                    {
+                for (auto &w : warnings) {
+                    if (w.warn_time <= 0 || w.warn_time > now) {
                         active_warn = &w;
                         break;
                     }
                 }
                 msg += "\u00a77- \u00a7eWarned: \u00a7f" + std::string(active_warn ? "true" : "false") + "\n";
-                if (active_warn)
-                {
+                if (active_warn) {
                     msg += "\u00a77  - \u00a7eWarn Reason: \u00a7f" + active_warn->warn_reason + "\n";
                     msg += "\u00a77  - \u00a7eWarn Expires: \u00a7f" + formatTimeRemaining(active_warn->warn_time) + "\n";
                 }
             }
             sender.sendMessage(msg);
-        }
-        else if (filter == "network")
-        {
+        } else if (filter == "network") {
             std::string ip;
-            if (target)
-            {
+            if (target) {
                 ip = target->getAddress().getHostname();
-            }
-            else
-            {
+            } else {
                 auto mod = plugin.db->getModLog(u.xuid);
                 ip = (mod.has_value() && !mod->ip_address.empty()) ? mod->ip_address : "(unknown)";
             }
@@ -199,11 +186,8 @@ namespace primebds::commands
             msg += "\u00a77- \u00a7eName: \u00a7f" + u.name + " \u00a78[" + status + "\u00a78]\n";
             msg += "\u00a77- \u00a7eIP: \u00a7f" + ip;
             sender.sendMessage(msg);
-        }
-        else if (filter == "world")
-        {
-            if (!target)
-            {
+        } else if (filter == "world") {
+            if (!target) {
                 sender.sendMessage("\u00a7cPlayer must be online to check world data");
                 return false;
             }
@@ -211,14 +195,10 @@ namespace primebds::commands
             auto loc = target->getLocation();
             auto tags = target->getScoreboardTags();
             std::string tags_str;
-            if (tags.empty())
-            {
+            if (tags.empty()) {
                 tags_str = "(none)";
-            }
-            else
-            {
-                for (size_t i = 0; i < tags.size(); ++i)
-                {
+            } else {
+                for (size_t i = 0; i < tags.size(); ++i) {
                     if (i > 0)
                         tags_str += ", ";
                     tags_str += tags[i];
@@ -247,9 +227,7 @@ namespace primebds::commands
             msg += "\u00a77- \u00a7eCan Fly: \u00a7f" + std::string(target->getAllowFlight() ? "true" : "false") + "\n";
             msg += "\u00a77- \u00a7eTags: \u00a7f" + tags_str;
             sender.sendMessage(msg);
-        }
-        else
-        {
+        } else {
             sender.sendMessage("\u00a7cInvalid filter type '" + filter + "'");
             return false;
         }
@@ -257,9 +235,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(check, "Checks a player's client info!", cmd_check,
-                     info.usages = {"/check <player: player> (info|mod|network|world)[info: info]"};
-                     info.permissions = {"primebds.command.check"};
-                     info.default_permission = "op";
-                     info.aliases = {"seen"};);
 } // namespace primebds::commands

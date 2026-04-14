@@ -8,12 +8,10 @@
 #include <sstream>
 #include <vector>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
     std::string formatBanMessage(const std::string &reason, int64_t expiration,
-                                 const std::string &server_name)
-    {
+                                 const std::string &server_name) {
         std::string exp_str = formatTimeRemaining(expiration);
         std::string name = server_name.empty() ? "this server" : server_name;
 
@@ -24,8 +22,7 @@ namespace primebds::utils
                reason;
     }
 
-    std::string formatTimeRemaining(int64_t expiration)
-    {
+    std::string formatTimeRemaining(int64_t expiration) {
         if (expiration == 0)
             return "Never - Permanent Ban";
 
@@ -39,8 +36,7 @@ namespace primebds::utils
         if (remaining > 50LL * 365 * 24 * 3600)
             return "Never - Permanent Ban";
 
-        struct TimeUnit
-        {
+        struct TimeUnit {
             const char *name;
             int64_t seconds;
         };
@@ -55,11 +51,9 @@ namespace primebds::utils
             {"second", 1}};
 
         std::vector<std::string> parts;
-        for (auto &u : units)
-        {
+        for (auto &u : units) {
             int64_t count = remaining / u.seconds;
-            if (count > 0)
-            {
+            if (count > 0) {
                 remaining %= u.seconds;
                 std::string part = std::to_string(count) + " " + u.name;
                 if (count > 1)
@@ -72,8 +66,7 @@ namespace primebds::utils
             return "0 seconds";
 
         std::ostringstream ss;
-        for (size_t i = 0; i < parts.size(); ++i)
-        {
+        for (size_t i = 0; i < parts.size(); ++i) {
             if (i > 0)
                 ss << ", ";
             ss << parts[i];
@@ -81,8 +74,7 @@ namespace primebds::utils
         return ss.str();
     }
 
-    int64_t safeDuration(int64_t seconds)
-    {
+    int64_t safeDuration(int64_t seconds) {
         constexpr int64_t MAX_DURATION = 10LL * 365 * 24 * 3600; // 10 years
         if (seconds < 0)
             return 0;

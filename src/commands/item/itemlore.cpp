@@ -1,3 +1,6 @@
+/// @file itemlore.cpp
+/// Modify item lore data!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/target_selector.h"
@@ -5,20 +8,26 @@
 #include <algorithm>
 #include <string>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_itemlore(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(itemlore, "Modify item lore data!", cmd_itemlore,
+                     info.usages = {"/itemlore <player: player> (add|set|delete|clear) [text: string]"};
+                     info.permissions = {"primebds.command.itemlore"};
+                     info.default_permission = "op";
+                     info.aliases = {"lore"};);
+
+    /// Modify item lore data!
     static bool cmd_itemlore(PrimeBDS &plugin, endstone::CommandSender &sender,
-                             const std::vector<std::string> &args)
-    {
-        if (args.size() < 2)
-        {
+                             const std::vector<std::string> &args) {
+        if (args.size() < 2) {
             sender.sendMessage("\u00a7cUsage: /itemlore <player> <add|set|delete|clear> [message|line]");
             return false;
         }
         auto targets = utils::getMatchingActors(plugin.getServer(), args[0], sender);
-        if (targets.empty())
-        {
+        if (targets.empty()) {
             sender.sendMessage("\u00a7cNo matching players found");
             return false;
         }
@@ -27,8 +36,7 @@ namespace primebds::commands
         std::transform(action.begin(), action.end(), action.begin(), ::tolower);
         std::string extra = (args.size() > 2) ? args[2] : "";
 
-        for (auto *t : targets)
-        {
+        for (auto *t : targets) {
             auto *p = dynamic_cast<endstone::Player *>(t);
             if (!p)
                 continue;
@@ -38,38 +46,25 @@ namespace primebds::commands
             auto meta = held->getItemMeta();
             auto lore = meta->getLore();
 
-            if (action == "add" && !extra.empty())
-            {
+            if (action == "add" && !extra.empty()) {
                 lore.push_back(extra);
                 meta->setLore(lore);
-            }
-            else if (action == "set" && !extra.empty())
-            {
+            } else if (action == "set" && !extra.empty()) {
                 meta->setLore(std::vector<std::string>{extra});
-            }
-            else if (action == "delete")
-            {
-                if (!lore.empty())
-                {
-                    if (!extra.empty())
-                    {
+            } else if (action == "delete") {
+                if (!lore.empty()) {
+                    if (!extra.empty()) {
                         int idx = std::stoi(extra) - 1;
                         if (idx >= 0 && idx < static_cast<int>(lore.size()))
                             lore.erase(lore.begin() + idx);
-                    }
-                    else
-                    {
+                    } else {
                         lore.pop_back();
                     }
                     meta->setLore(lore);
                 }
-            }
-            else if (action == "clear")
-            {
+            } else if (action == "clear") {
                 meta->setLore(std::nullopt);
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("\u00a7cInvalid action. Use add, set, delete, or clear");
                 return false;
             }
@@ -82,9 +77,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(itemlore, "Modify item lore data!", cmd_itemlore,
-                     info.usages = {"/itemlore <player: player> (add|set|delete|clear) [text: string]"};
-                     info.permissions = {"primebds.command.itemlore"};
-                     info.default_permission = "op";
-                     info.aliases = {"lore"};);
 } // namespace primebds::commands

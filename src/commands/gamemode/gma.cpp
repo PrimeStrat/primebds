@@ -1,18 +1,25 @@
+/// @file gma.cpp
+/// Sets your game mode to adventure!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/target_selector.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_gma(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(gma, "Sets your game mode to adventure!", cmd_gma,
+                     info.usages = {"/gma [player: player]"};
+                     info.permissions = {"primebds.command.gma"};);
+
+    /// Sets your game mode to adventure!
     static bool cmd_gma(PrimeBDS &plugin, endstone::CommandSender &sender,
-                        const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                        const std::vector<std::string> &args) {
+        if (args.empty()) {
             auto *player = sender.asPlayer();
-            if (!player)
-            {
+            if (!player) {
                 sender.sendMessage("This command can only be executed by a player");
                 return false;
             }
@@ -21,10 +28,8 @@ namespace primebds::commands
             return true;
         }
         auto targets = utils::getMatchingActors(plugin.getServer(), args[0], sender);
-        for (auto *t : targets)
-        {
-            if (auto *p = dynamic_cast<endstone::Player *>(t))
-            {
+        for (auto *t : targets) {
+            if (auto *p = dynamic_cast<endstone::Player *>(t)) {
                 p->setGameMode(endstone::GameMode::Adventure);
                 p->sendMessage("Your game mode has been updated to Adventure");
             }
@@ -33,7 +38,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(gma, "Sets your game mode to adventure!", cmd_gma,
-                     info.usages = {"/gma [player: player]"};
-                     info.permissions = {"primebds.command.gma"};);
 } // namespace primebds::commands

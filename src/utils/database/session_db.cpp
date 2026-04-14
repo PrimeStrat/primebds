@@ -5,16 +5,13 @@
 
 #include <ctime>
 
-namespace primebds::db
-{
+namespace primebds::db {
 
-    SessionDB::SessionDB(const std::string &db_name) : DatabaseManager(db_name)
-    {
+    SessionDB::SessionDB(const std::string &db_name) : DatabaseManager(db_name) {
         createTables();
     }
 
-    void SessionDB::createTables()
-    {
+    void SessionDB::createTables() {
         createTable("sessions", {{"id", "INTEGER PRIMARY KEY AUTOINCREMENT"},
                                  {"xuid", "TEXT"},
                                  {"name", "TEXT"},
@@ -25,36 +22,31 @@ namespace primebds::db
     }
 
     void SessionDB::insertSession(const std::string &xuid, const std::string &name,
-                                  const std::string &ip, const std::string &device_os)
-    {
+                                  const std::string &ip, const std::string &device_os) {
         auto now = std::to_string(std::time(nullptr));
         execute(
             "INSERT INTO sessions (xuid, name, join_time, ip_address, device_os) VALUES (?, ?, ?, ?, ?)",
             {xuid, name, now, ip, device_os});
     }
 
-    void SessionDB::endSession(const std::string &xuid)
-    {
+    void SessionDB::endSession(const std::string &xuid) {
         auto now = std::to_string(std::time(nullptr));
         execute(
             "UPDATE sessions SET leave_time = ? WHERE xuid = ? AND leave_time = 0",
             {now, xuid});
     }
 
-    std::vector<std::map<std::string, std::string>> SessionDB::getActiveSessions()
-    {
+    std::vector<std::map<std::string, std::string>> SessionDB::getActiveSessions() {
         return query("SELECT * FROM sessions WHERE leave_time = 0");
     }
 
-    int64_t SessionDB::getTotalPlaytime(const std::string &xuid)
-    {
+    int64_t SessionDB::getTotalPlaytime(const std::string &xuid) {
         auto rows = query(
             "SELECT join_time, leave_time FROM sessions WHERE xuid = ? AND leave_time > 0",
             {xuid});
 
         int64_t total = 0;
-        for (auto &r : rows)
-        {
+        for (auto &r : rows) {
             int64_t join = std::stoll(r["join_time"]);
             int64_t leave = std::stoll(r["leave_time"]);
             total += (leave - join);
@@ -63,8 +55,7 @@ namespace primebds::db
     }
 
     std::vector<std::map<std::string, std::string>> SessionDB::getRecentSessions(
-        const std::string &xuid, int limit)
-    {
+        const std::string &xuid, int limit) {
         return query(
             "SELECT * FROM sessions WHERE xuid = ? ORDER BY join_time DESC LIMIT ?",
             {xuid, std::to_string(limit)});

@@ -1,24 +1,30 @@
+/// @file repair.cpp
+/// Repairs the item in hand!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/target_selector.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_repair(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(repair, "Repairs the item in hand!", cmd_repair,
+                     info.usages = {"/repair [player: player]"};
+                     info.permissions = {"primebds.command.repair", "primebds.command.repair.other"};);
+
+    /// Repairs the item in hand!
     static bool cmd_repair(PrimeBDS &plugin, endstone::CommandSender &sender,
-                           const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                           const std::vector<std::string> &args) {
+        if (args.empty()) {
             auto *player = sender.asPlayer();
-            if (!player)
-            {
+            if (!player) {
                 sender.sendMessage("\u00a7cThis command can only be executed by a player");
                 return false;
             }
             auto held = player->getInventory().getItemInMainHand();
-            if (!held || held->getType() == endstone::ItemType::Air)
-            {
+            if (!held || held->getType() == endstone::ItemType::Air) {
                 sender.sendMessage("\u00a7cYou are not holding an item to repair");
                 return false;
             }
@@ -30,16 +36,14 @@ namespace primebds::commands
             return true;
         }
 
-        if (!sender.hasPermission("primebds.command.repair.other"))
-        {
+        if (!sender.hasPermission("primebds.command.repair.other")) {
             sender.sendMessage("\u00a7cYou do not have permission to repair others' items");
             return true;
         }
 
         auto targets = utils::getMatchingActors(plugin.getServer(), args[0], sender);
         int count = 0;
-        for (auto *t : targets)
-        {
+        for (auto *t : targets) {
             auto *p = dynamic_cast<endstone::Player *>(t);
             if (!p)
                 continue;
@@ -63,7 +67,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(repair, "Repairs the item in hand!", cmd_repair,
-                     info.usages = {"/repair [player: player]"};
-                     info.permissions = {"primebds.command.repair", "primebds.command.repair.other"};);
 } // namespace primebds::commands

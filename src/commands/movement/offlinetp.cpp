@@ -1,38 +1,45 @@
+/// @file offlinetp.cpp
+/// Teleport to where a player last logged out.
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
 #include <cstdlib>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_offlinetp(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(offlinetp, "Teleport to where a player last logged out.", cmd_offlinetp,
+                     info.usages = {"/offlinetp <player: player>"};
+                     info.permissions = {"primebds.command.offlinetp"};
+                     info.default_permission = "op";
+                     info.aliases = {"otp"};);
+
+    /// Teleport to where a player last logged out.
     static bool cmd_offlinetp(PrimeBDS &plugin, endstone::CommandSender &sender,
-                              const std::vector<std::string> &args)
-    {
+                              const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
 
-        if (args.empty())
-        {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cYou must specify a player to teleport to");
             return false;
         }
 
         for (auto &a : args)
-            if (a.find('@') != std::string::npos)
-            {
+            if (a.find('@') != std::string::npos) {
                 sender.sendMessage("\u00a7cTarget selectors are invalid for this command");
                 return false;
             }
 
         std::string target_name = args[0];
         auto user = plugin.db->getUserByName(target_name);
-        if (!user || user->last_logout_pos.empty())
-        {
+        if (!user || user->last_logout_pos.empty()) {
             sender.sendMessage("\u00a7cNo logout record found for " + target_name);
             return true;
         }
@@ -43,8 +50,7 @@ namespace primebds::commands
         auto p2 = pos.find(',', p1 + 1);
         auto p3 = pos.find(',', p2 + 1);
 
-        if (p1 == std::string::npos || p2 == std::string::npos)
-        {
+        if (p1 == std::string::npos || p2 == std::string::npos) {
             sender.sendMessage("\u00a7cLogout location data missing or incomplete for " + target_name);
             return true;
         }
@@ -58,9 +64,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(offlinetp, "Teleport to where a player last logged out.", cmd_offlinetp,
-                     info.usages = {"/offlinetp <player: player>"};
-                     info.permissions = {"primebds.command.offlinetp"};
-                     info.default_permission = "op";
-                     info.aliases = {"otp"};);
 } // namespace primebds::commands

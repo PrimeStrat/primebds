@@ -1,3 +1,6 @@
+/// @file tempban.cpp
+/// Temporarily bans a player from the server!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/moderation.h"
@@ -7,40 +10,42 @@
 #include <cstdlib>
 #include <map>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
+
+    static bool cmd_tempban(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(tempban, "Temporarily bans a player from the server!", cmd_tempban,
+                     info.usages = {"/tempban <player: player> <duration: int> <unit: string> [reason: message]"};
+                     info.permissions = {"primebds.command.tempban"};);
 
     static const std::map<std::string, int64_t> tempban_time_units = {
         {"second", 1}, {"minute", 60}, {"hour", 3600}, {"day", 86400}, {"week", 604800}, {"month", 2592000}, {"year", 31536000}};
 
+    /// Temporarily bans a player from the server!
     static bool cmd_tempban(PrimeBDS &plugin, endstone::CommandSender &sender,
-                            const std::vector<std::string> &args)
-    {
-        if (args.size() < 3)
-        {
+                            const std::vector<std::string> &args) {
+        if (args.size() < 3) {
             sender.sendMessage("\u00a7cUsage: /tempban <player> <duration> <unit> [reason]");
             return false;
         }
 
         for (auto &a : args)
-            if (a.find('@') != std::string::npos)
-            {
+            if (a.find('@') != std::string::npos) {
                 sender.sendMessage("\u00a7cTarget selectors are invalid for this command");
                 return false;
             }
 
         std::string target_name = args[0];
         int duration_number = std::atoi(args[1].c_str());
-        if (duration_number <= 0)
-        {
+        if (duration_number <= 0) {
             sender.sendMessage("\u00a7cDuration must be positive");
             return false;
         }
 
         std::string unit = args[2];
         auto it = tempban_time_units.find(unit);
-        if (it == tempban_time_units.end())
-        {
+        if (it == tempban_time_units.end()) {
             sender.sendMessage("\u00a7cInvalid time unit. Use: second, minute, hour, day, week, month, year");
             return false;
         }
@@ -49,11 +54,9 @@ namespace primebds::commands
         int64_t expiration = std::time(nullptr) + total_secs;
 
         std::string reason = "Negative Behavior";
-        if (args.size() > 3)
-        {
+        if (args.size() > 3) {
             reason.clear();
-            for (size_t i = 3; i < args.size(); ++i)
-            {
+            for (size_t i = 3; i < args.size(); ++i) {
                 if (i > 3)
                     reason += " ";
                 reason += args[i];
@@ -61,15 +64,13 @@ namespace primebds::commands
         }
 
         auto user = plugin.db->getUserByName(target_name);
-        if (!user)
-        {
+        if (!user) {
             sender.sendMessage("\u00a7cPlayer not found");
             return false;
         }
 
         auto modlog = plugin.db->getModLog(user->xuid);
-        if (modlog && modlog->is_banned)
-        {
+        if (modlog && modlog->is_banned) {
             sender.sendMessage("\u00a76Player \u00a7e" + target_name + " \u00a76is already banned");
             return false;
         }
@@ -91,7 +92,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(tempban, "Temporarily bans a player from the server!", cmd_tempban,
-                     info.usages = {"/tempban <player: player> <duration: int> <unit: string> [reason: message]"};
-                     info.permissions = {"primebds.command.tempban"};);
 } // namespace primebds::commands

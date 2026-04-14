@@ -3,29 +3,24 @@
 
 #include "primebds/commands/command_registry.h"
 
-namespace primebds
-{
+namespace primebds {
 
-    CommandRegistry &CommandRegistry::instance()
-    {
+    CommandRegistry &CommandRegistry::instance() {
         static CommandRegistry inst;
         return inst;
     }
 
-    void CommandRegistry::registerCommand(const CommandInfo &info, CommandHandler handler)
-    {
+    void CommandRegistry::registerCommand(const CommandInfo &info, CommandHandler handler) {
         CommandRegistration reg{info, std::move(handler)};
         commands_[info.name] = std::move(reg);
 
         // Also register aliases
-        for (auto &alias : info.aliases)
-        {
+        for (auto &alias : info.aliases) {
             commands_[alias] = commands_[info.name];
         }
     }
 
-    const CommandRegistration *CommandRegistry::find(const std::string &name) const
-    {
+    const CommandRegistration *CommandRegistry::find(const std::string &name) const {
         auto it = commands_.find(name);
         if (it != commands_.end())
             return &it->second;

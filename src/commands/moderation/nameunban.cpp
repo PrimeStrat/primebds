@@ -1,22 +1,29 @@
+/// @file nameunban.cpp
+/// Unbans a player name from the server!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/logging.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_nameunban(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(nameunban, "Unbans a player name from the server!", cmd_nameunban,
+                     info.usages = {"/nameunban <name: string>"};
+                     info.permissions = {"primebds.command.nameunban"};);
+
+    /// Unbans a player name from the server!
     static bool cmd_nameunban(PrimeBDS &plugin, endstone::CommandSender &sender,
-                              const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                              const std::vector<std::string> &args) {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /nameunban <name>");
             return false;
         }
 
         std::string name = args[0];
-        if (!plugin.serverdb->checkNameBan(name))
-        {
+        if (!plugin.serverdb->checkNameBan(name)) {
             sender.sendMessage("\u00a76Name \u00a7e" + name + " \u00a76is not banned");
             return false;
         }
@@ -27,7 +34,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(nameunban, "Unbans a player name from the server!", cmd_nameunban,
-                     info.usages = {"/nameunban <name: string>"};
-                     info.permissions = {"primebds.command.nameunban"};);
 } // namespace primebds::commands

@@ -1,3 +1,6 @@
+/// @file activity.cpp
+/// Lists out session information!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/time.h"
@@ -5,11 +8,16 @@
 #include <ctime>
 #include <algorithm>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
-    static std::string formatDuration(int64_t seconds)
-    {
+    static bool cmd_activity(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(activity, "Lists out session information!", cmd_activity,
+                     info.usages = {"/activity <player: player> [page: int]"};
+                     info.permissions = {"primebds.command.activity"};);
+
+    static std::string formatDuration(int64_t seconds) {
         if (seconds < 60)
             return std::to_string(seconds) + "s";
         int64_t mins = seconds / 60;
@@ -21,25 +29,22 @@ namespace primebds::commands
         return std::to_string(hours / 24) + "d";
     }
 
+    /// Lists out session information!
     static bool cmd_activity(PrimeBDS &plugin, endstone::CommandSender &sender,
-                             const std::vector<std::string> &args)
-    {
+                             const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
 
-        if (args.empty())
-        {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /activity <player> [page]");
             return true;
         }
 
         for (auto &a : args)
-            if (a.find('@') != std::string::npos)
-            {
+            if (a.find('@') != std::string::npos) {
                 sender.sendMessage("\u00a7cTarget selectors are invalid for this command");
                 return false;
             }
@@ -48,8 +53,7 @@ namespace primebds::commands
         int page = (args.size() > 1) ? std::max(1, std::atoi(args[1].c_str())) : 1;
 
         auto user = plugin.db->getUserByName(target_name);
-        if (!user)
-        {
+        if (!user) {
             sender.sendMessage("No session history found for " + target_name);
             return true;
         }
@@ -60,7 +64,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(activity, "Lists out session information!", cmd_activity,
-                     info.usages = {"/activity <player: player> [page: int]"};
-                     info.permissions = {"primebds.command.activity"};);
 } // namespace primebds::commands

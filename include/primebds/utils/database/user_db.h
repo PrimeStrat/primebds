@@ -16,11 +16,9 @@
 #include <chrono>
 #include <mutex>
 
-namespace primebds::db
-{
+namespace primebds::db {
 
-    class UserDB : public DatabaseManager
-    {
+    class UserDB : public DatabaseManager {
     public:
         explicit UserDB(const std::string &db_name);
 

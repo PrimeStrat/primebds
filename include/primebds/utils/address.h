@@ -5,8 +5,7 @@
 
 #include <string>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
     bool isValidIp(const std::string &ip);
     bool isValidPort(const std::string &port_str);

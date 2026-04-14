@@ -3,11 +3,9 @@
 
 #include "primebds/utils/config/config_defaults.h"
 
-namespace primebds::config
-{
+namespace primebds::config {
 
-    nlohmann::json getDefaultModules()
-    {
+    nlohmann::json getDefaultModules() {
         return {
             {"afk", {{"enabled", true}, {"timeout", 300}, {"kick_afk", false}, {"kick_timeout", 600}, {"message", "§7{player} is now AFK."}, {"return_message", "§7{player} is no longer AFK."}}},
             {"back", {{"enabled", true}, {"delay", 0}, {"cooldown", 0}}},
@@ -24,15 +22,13 @@ namespace primebds::config
             {"warps", {{"enabled", true}, {"teleport_delay", 0}, {"teleport_cooldown", 0}}}};
     }
 
-    nlohmann::json getDefaultPermissions()
-    {
+    nlohmann::json getDefaultPermissions() {
         return {
             {"Default", {{"permissions", {{"endstone.broadcast", true}, {"endstone.broadcast.user", true}, {"endstone.command.version", true}, {"endstone.command.plugins", true}, {"primebds.command.ping", true}, {"primebds.command.reply", true}, {"minecraft.command.list", true}, {"minecraft.command.tell", true}, {"minecraft.command.me", true}}}, {"inherits", nlohmann::json::array()}, {"weight", 0}}},
             {"Operator", {{"permissions", {{"*", true}}}, {"inherits", {"Default"}}, {"weight", 100}, {"prefix", "§8[§cAdmin§8] §c"}, {"suffix", "§r"}}}};
     }
 
-    std::vector<std::string> getDefaultRules()
-    {
+    std::vector<std::string> getDefaultRules() {
         return {};
     }
 

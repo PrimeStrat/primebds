@@ -8,15 +8,12 @@
 #include <stdexcept>
 #include <iostream>
 
-namespace primebds::db
-{
+namespace primebds::db {
 
-    DatabaseManager::DatabaseManager(const std::string &db_path)
-    {
+    DatabaseManager::DatabaseManager(const std::string &db_path) {
         namespace fs = std::filesystem;
         db_path_ = db_path;
-        if (db_path_.find(".db") == std::string::npos)
-        {
+        if (db_path_.find(".db") == std::string::npos) {
             db_path_ += ".db";
         }
 
@@ -24,8 +21,7 @@ namespace primebds::db
         fs::create_directories(fs::path(db_path_).parent_path());
 
         int rc = sqlite3_open(db_path_.c_str(), &db_);
-        if (rc != SQLITE_OK)
-        {
+        if (rc != SQLITE_OK) {
             throw std::runtime_error("Failed to open database: " + std::string(sqlite3_errmsg(db_)));
         }
 
@@ -33,37 +29,30 @@ namespace primebds::db
         execute("PRAGMA journal_mode=WAL;");
     }
 
-    DatabaseManager::~DatabaseManager()
-    {
+    DatabaseManager::~DatabaseManager() {
         close();
     }
 
-    void DatabaseManager::close()
-    {
+    void DatabaseManager::close() {
         std::lock_guard lock(mutex_);
-        if (db_)
-        {
+        if (db_) {
             sqlite3_close(db_);
             db_ = nullptr;
         }
     }
 
-    void DatabaseManager::bindParams(sqlite3_stmt *stmt, const std::vector<std::string> &params)
-    {
-        for (int i = 0; i < static_cast<int>(params.size()); ++i)
-        {
+    void DatabaseManager::bindParams(sqlite3_stmt *stmt, const std::vector<std::string> &params) {
+        for (int i = 0; i < static_cast<int>(params.size()); ++i) {
             sqlite3_bind_text(stmt, i + 1, params[i].c_str(), -1, SQLITE_TRANSIENT);
         }
     }
 
-    void DatabaseManager::execute(const std::string &sql, const std::vector<std::string> &params)
-    {
+    void DatabaseManager::execute(const std::string &sql, const std::vector<std::string> &params) {
         std::lock_guard lock(mutex_);
 
         sqlite3_stmt *stmt = nullptr;
         int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
-        if (rc != SQLITE_OK)
-        {
+        if (rc != SQLITE_OK) {
             throw std::runtime_error("SQL prepare error: " + std::string(sqlite3_errmsg(db_)) +
                                      " | Query: " + sql);
         }
@@ -73,21 +62,18 @@ namespace primebds::db
         rc = sqlite3_step(stmt);
         sqlite3_finalize(stmt);
 
-        if (rc != SQLITE_DONE && rc != SQLITE_ROW)
-        {
+        if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
             throw std::runtime_error("SQL execute error: " + std::string(sqlite3_errmsg(db_)));
         }
     }
 
     std::vector<std::map<std::string, std::string>>
-    DatabaseManager::query(const std::string &sql, const std::vector<std::string> &params)
-    {
+    DatabaseManager::query(const std::string &sql, const std::vector<std::string> &params) {
         std::lock_guard lock(mutex_);
 
         sqlite3_stmt *stmt = nullptr;
         int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
-        if (rc != SQLITE_OK)
-        {
+        if (rc != SQLITE_OK) {
             throw std::runtime_error("SQL prepare error: " + std::string(sqlite3_errmsg(db_)));
         }
 
@@ -96,11 +82,9 @@ namespace primebds::db
         std::vector<std::map<std::string, std::string>> results;
         int col_count = sqlite3_column_count(stmt);
 
-        while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
-        {
+        while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
             std::map<std::string, std::string> row;
-            for (int i = 0; i < col_count; ++i)
-            {
+            for (int i = 0; i < col_count; ++i) {
                 auto col_name = sqlite3_column_name(stmt, i);
                 auto col_val = reinterpret_cast<const char *>(sqlite3_column_text(stmt, i));
                 row[col_name] = col_val ? col_val : "";
@@ -113,8 +97,7 @@ namespace primebds::db
     }
 
     std::optional<std::map<std::string, std::string>>
-    DatabaseManager::queryRow(const std::string &sql, const std::vector<std::string> &params)
-    {
+    DatabaseManager::queryRow(const std::string &sql, const std::vector<std::string> &params) {
         auto results = query(sql, params);
         if (results.empty())
             return std::nullopt;
@@ -122,11 +105,9 @@ namespace primebds::db
     }
 
     void DatabaseManager::createTable(const std::string &table,
-                                      const std::vector<std::pair<std::string, std::string>> &columns)
-    {
+                                      const std::vector<std::pair<std::string, std::string>> &columns) {
         std::string sql = "CREATE TABLE IF NOT EXISTS " + table + " (";
-        for (size_t i = 0; i < columns.size(); ++i)
-        {
+        for (size_t i = 0; i < columns.size(); ++i) {
             if (i > 0)
                 sql += ", ";
             sql += columns[i].first + " " + columns[i].second;
@@ -136,36 +117,25 @@ namespace primebds::db
     }
 
     void DatabaseManager::migrateTable(const std::string &table,
-                                       const std::vector<std::pair<std::string, std::string>> &expected_columns)
-    {
+                                       const std::vector<std::pair<std::string, std::string>> &expected_columns) {
         auto existing = getColumnNames(table);
         std::set<std::string> existing_set(existing.begin(), existing.end());
 
-        for (auto &[col_name, col_type] : expected_columns)
-        {
-            if (existing_set.find(col_name) == existing_set.end())
-            {
+        for (auto &[col_name, col_type] : expected_columns) {
+            if (existing_set.find(col_name) == existing_set.end()) {
                 std::string default_val;
-                if (col_type.find("INTEGER") != std::string::npos)
-                {
+                if (col_type.find("INTEGER") != std::string::npos) {
                     default_val = col_name.substr(0, 4) == "can_" ? "1" : "0";
-                }
-                else if (col_type.find("REAL") != std::string::npos)
-                {
+                } else if (col_type.find("REAL") != std::string::npos) {
                     default_val = "0.0";
-                }
-                else
-                {
+                } else {
                     default_val = "''";
                 }
 
-                try
-                {
+                try {
                     execute("ALTER TABLE " + table + " ADD COLUMN " + col_name + " " + col_type +
                             " DEFAULT " + default_val);
-                }
-                catch (const std::exception &e)
-                {
+                } catch (const std::exception &e) {
                     std::cerr << "Warning: Could not add column '" << col_name << "' to " << table
                               << ": " << e.what() << std::endl;
                 }
@@ -173,15 +143,12 @@ namespace primebds::db
         }
     }
 
-    std::vector<std::string> DatabaseManager::getColumnNames(const std::string &table)
-    {
+    std::vector<std::string> DatabaseManager::getColumnNames(const std::string &table) {
         std::vector<std::string> names;
         auto rows = query("PRAGMA table_info(" + table + ")");
-        for (auto &row : rows)
-        {
+        for (auto &row : rows) {
             auto it = row.find("name");
-            if (it != row.end())
-            {
+            if (it != row.end()) {
                 names.push_back(it->second);
             }
         }

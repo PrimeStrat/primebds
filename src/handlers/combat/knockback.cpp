@@ -9,11 +9,9 @@
 #include <chrono>
 #include <cmath>
 
-namespace primebds::handlers::combat
-{
+namespace primebds::handlers::combat {
 
-    void handleKnockbackEvent(PrimeBDS &plugin, endstone::ActorKnockbackEvent &event)
-    {
+    void handleKnockbackEvent(PrimeBDS &plugin, endstone::ActorKnockbackEvent &event) {
         auto cfg = config::ConfigManager::instance().config();
         auto *source = event.getSource();
         std::string entity_key = std::string(event.getActor().getType()) + ":" +
@@ -24,8 +22,7 @@ namespace primebds::handlers::combat
 
         auto *source_player = source ? dynamic_cast<endstone::Player *>(source) : nullptr;
         std::vector<std::string> tags;
-        if (source_player)
-        {
+        if (source_player) {
             auto stags = source_player->getScoreboardTags();
             tags.assign(stags.begin(), stags.end());
         }
@@ -41,24 +38,18 @@ namespace primebds::handlers::combat
             last_hit_time = cd_it->second;
 
         // Cooldown tracking
-        if (now - last_hit_time >= kb_cooldown && last_hit_type == "entity_attack")
-        {
+        if (now - last_hit_time >= kb_cooldown && last_hit_type == "entity_attack") {
             plugin.entity_damage_cooldowns[entity_key] = now;
-        }
-        else if (now - last_hit_time < kb_cooldown && last_hit_type == "entity_attack")
-        {
+        } else if (now - last_hit_time < kb_cooldown && last_hit_type == "entity_attack") {
             // Check enchant knockback
-            if (source_player)
-            {
+            if (source_player) {
                 auto held = source_player->getInventory().getItemInMainHand();
-                if (held && held->getType() != endstone::ItemType::Air)
-                {
+                if (held && held->getType() != endstone::ItemType::Air) {
                     auto meta = held->getItemMeta();
                     int kb_lvl = meta->getEnchantLevel(endstone::EnchantmentId("knockback"));
                     auto enc_it = plugin.entity_enchant_hit.find(entity_key);
                     double last_enc = (enc_it != plugin.entity_enchant_hit.end()) ? enc_it->second : 0.0;
-                    if (kb_lvl > 0 && now - last_enc >= kb_cooldown)
-                    {
+                    if (kb_lvl > 0 && now - last_enc >= kb_cooldown) {
                         plugin.entity_enchant_hit[entity_key] = last_hit_time;
                         plugin.entity_last_hit[entity_key] = "";
                         return;
@@ -73,8 +64,7 @@ namespace primebds::handlers::combat
         auto kb = event.getKnockback();
 
         // Projectile knockback
-        if (last_hit_type == "projectile")
-        {
+        if (last_hit_type == "projectile") {
             auto h_proj = getCustomTag(cfg, tags, "projectiles.horizontal_knockback_modifier");
             auto v_proj = getCustomTag(cfg, tags, "projectiles.vertical_knockback_modifier");
 
@@ -109,8 +99,7 @@ namespace primebds::handlers::combat
 
         bool sprinting = source_player && source_player->isSprinting();
 
-        if (sprinting && disable_sprint.has_value() && disable_sprint.value() != 0.0 && kb.getY() <= 0)
-        {
+        if (sprinting && disable_sprint.has_value() && disable_sprint.value() != 0.0 && kb.getY() <= 0) {
             event.setCancelled(true);
             return;
         }
@@ -119,8 +108,7 @@ namespace primebds::handlers::combat
         double ny = kb.getY() * v_mod;
         double nz = kb.getZ() * h_mod;
 
-        if (sprinting && sh_mod != 0.0)
-        {
+        if (sprinting && sh_mod != 0.0) {
             nx *= sh_mod;
             nz *= sh_mod;
         }

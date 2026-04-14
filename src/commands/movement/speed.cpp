@@ -1,3 +1,6 @@
+/// @file speed.cpp
+/// Modifies player flyspeed or walkspeed!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/target_selector.h"
@@ -5,14 +8,22 @@
 #include <cstdlib>
 #include <cmath>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_speed(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(speed, "Modifies player flyspeed or walkspeed!", cmd_speed,
+                     info.usages = {
+                         "/speed <value: float>",
+                         "/speed (flyspeed|walkspeed) <value: float> [player: player]",
+                         "/speed (reset) (flyspeed|walkspeed) [player: player]"};
+                     info.permissions = {"primebds.command.speed"};);
+
+    /// Modifies player flyspeed or walkspeed!
     static bool cmd_speed(PrimeBDS &plugin, endstone::CommandSender &sender,
-                          const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                          const std::vector<std::string> &args) {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /speed <value> | /speed <flyspeed|walkspeed> <value> [player]");
             return false;
         }
@@ -20,24 +31,18 @@ namespace primebds::commands
         auto *self_player = sender.asPlayer();
 
         // Single arg = auto-detect fly/walk and set speed on self
-        if (args.size() == 1)
-        {
-            if (!self_player)
-            {
+        if (args.size() == 1) {
+            if (!self_player) {
                 sender.sendMessage("\u00a7cOnly players can use this shorthand");
                 return false;
             }
 
             std::string arg = args[0];
-            if (arg == "reset")
-            {
-                if (self_player->isFlying())
-                {
+            if (arg == "reset") {
+                if (self_player->isFlying()) {
                     self_player->setFlySpeed(0.05f);
                     sender.sendMessage("\u00a7bFlyspeed \u00a7rreset to default");
-                }
-                else
-                {
+                } else {
                     self_player->setWalkSpeed(0.1f);
                     sender.sendMessage("\u00a7bWalkspeed \u00a7rreset to default");
                 }
@@ -45,13 +50,10 @@ namespace primebds::commands
             }
 
             float val = std::strtof(arg.c_str(), nullptr);
-            if (self_player->isFlying())
-            {
+            if (self_player->isFlying()) {
                 sender.sendMessage("\u00a7e" + self_player->getName() + "'s \u00a7bflyspeed \u00a7rchanged to \u00a7e" + std::to_string(val));
                 self_player->setFlySpeed(val);
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("\u00a7e" + self_player->getName() + "'s \u00a7bwalkspeed \u00a7rchanged to \u00a7e" + std::to_string(val));
                 self_player->setWalkSpeed(val);
             }
@@ -59,27 +61,20 @@ namespace primebds::commands
         }
 
         // Check for reset subcommand
-        if (args[0] == "reset")
-        {
-            if (args.size() < 2)
-            {
+        if (args[0] == "reset") {
+            if (args.size() < 2) {
                 sender.sendMessage("\u00a7cUsage: /speed reset <flyspeed|walkspeed> [player]");
                 return false;
             }
             std::string attr = args[1];
             auto targets = (args.size() >= 3) ? utils::getMatchingActors(plugin.getServer(), args[2], sender)
                                               : std::vector<endstone::Actor *>{self_player};
-            for (auto *t : targets)
-            {
-                if (auto *p = dynamic_cast<endstone::Player *>(t))
-                {
-                    if (attr == "flyspeed")
-                    {
+            for (auto *t : targets) {
+                if (auto *p = dynamic_cast<endstone::Player *>(t)) {
+                    if (attr == "flyspeed") {
                         p->setFlySpeed(0.05f);
                         p->sendMessage("\u00a7bFlyspeed \u00a7rreset to default");
-                    }
-                    else
-                    {
+                    } else {
                         p->setWalkSpeed(0.1f);
                         p->sendMessage("\u00a7bWalkspeed \u00a7rreset to default");
                     }
@@ -90,8 +85,7 @@ namespace primebds::commands
 
         // Normal: /speed <attr> <value> [player]
         std::string attr = args[0];
-        if (attr != "flyspeed" && attr != "walkspeed")
-        {
+        if (attr != "flyspeed" && attr != "walkspeed") {
             sender.sendMessage("\u00a7cUnknown speed attribute: " + attr);
             return false;
         }
@@ -100,10 +94,8 @@ namespace primebds::commands
         auto targets = (args.size() >= 3) ? utils::getMatchingActors(plugin.getServer(), args[2], sender)
                                           : std::vector<endstone::Actor *>{self_player};
 
-        for (auto *t : targets)
-        {
-            if (auto *p = dynamic_cast<endstone::Player *>(t))
-            {
+        for (auto *t : targets) {
+            if (auto *p = dynamic_cast<endstone::Player *>(t)) {
                 if (attr == "flyspeed")
                     p->setFlySpeed(new_speed);
                 else
@@ -111,24 +103,15 @@ namespace primebds::commands
             }
         }
 
-        if (targets.size() == 1)
-        {
+        if (targets.size() == 1) {
             auto *p = dynamic_cast<endstone::Player *>(targets[0]);
             if (p)
                 sender.sendMessage("\u00a7e" + p->getName() + "'s \u00a7b" + attr + " \u00a7rchanged to \u00a7e" + std::to_string(new_speed));
-        }
-        else
-        {
+        } else {
             sender.sendMessage("\u00a7e" + std::to_string(targets.size()) + " \u00a7rplayers had their \u00a7b" + attr + " \u00a7rchanged");
         }
         return true;
     }
 
-    REGISTER_COMMAND(speed, "Modifies player flyspeed or walkspeed!", cmd_speed,
-                     info.usages = {
-                         "/speed <value: float>",
-                         "/speed (flyspeed|walkspeed) <value: float> [player: player]",
-                         "/speed (reset) (flyspeed|walkspeed) [player: player]"};
-                     info.permissions = {"primebds.command.speed"};);
 
 } // namespace primebds::commands

@@ -1,17 +1,25 @@
+/// @file setspawn.cpp
+/// Sets the global spawn point!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
 #include <cstdlib>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_setspawn(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(setspawn, "Sets the global spawn point!", cmd_setspawn,
+                     info.usages = {"/setspawn"};
+                     info.permissions = {"primebds.command.setspawn"};);
+
+    /// Sets the global spawn point!
     static bool cmd_setspawn(PrimeBDS &plugin, endstone::CommandSender &sender,
-                             const std::vector<std::string> &args)
-    {
+                             const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
@@ -30,7 +38,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(setspawn, "Sets the global spawn point!", cmd_setspawn,
-                     info.usages = {"/setspawn"};
-                     info.permissions = {"primebds.command.setspawn"};);
 } // namespace primebds::commands

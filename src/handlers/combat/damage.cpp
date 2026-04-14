@@ -9,11 +9,9 @@
 #include <chrono>
 #include <string>
 
-namespace primebds::handlers::combat
-{
+namespace primebds::handlers::combat {
 
-    void handleDamageEvent(PrimeBDS &plugin, endstone::ActorDamageEvent &event)
-    {
+    void handleDamageEvent(PrimeBDS &plugin, endstone::ActorDamageEvent &event) {
         auto &entity = event.getActor();
         std::string entity_key = std::string(entity.getType()) + ":" + std::to_string(entity.getRuntimeId());
         auto now = std::chrono::duration<double>(
@@ -29,18 +27,15 @@ namespace primebds::handlers::combat
         std::string damage_type = std::string(source.getType());
         std::vector<std::string> source_tags;
 
-        if (auto *src_actor = source.getActor())
-        {
+        if (auto *src_actor = source.getActor()) {
             auto tags = src_actor->getScoreboardTags();
             source_tags.assign(tags.begin(), tags.end());
         }
 
         // God mode check (player only)
         auto *player = dynamic_cast<endstone::Player *>(&entity);
-        if (player)
-        {
-            if (plugin.isgod.count(player->getUniqueId().str()))
-            {
+        if (player) {
+            if (plugin.isgod.count(player->getUniqueId().str())) {
                 event.setCancelled(true);
                 return;
             }
@@ -57,25 +52,21 @@ namespace primebds::handlers::combat
 
         // Fire damage disable
         if (no_fire.has_value() && no_fire.value() != 0.0 &&
-            (damage_type == "fire_tick" || damage_type == "fire" || damage_type == "lava"))
-        {
+            (damage_type == "fire_tick" || damage_type == "fire" || damage_type == "lava")) {
             event.setCancelled(true);
             return;
         }
 
         // Explosion damage disable
         if (no_explosion.has_value() && no_explosion.value() != 0.0 &&
-            damage_type == "entity_explosive")
-        {
+            damage_type == "entity_explosive") {
             event.setCancelled(true);
             return;
         }
 
         // Custom fall damage height
-        if (damage_type == "fall" && fall_height.has_value() && fall_height.value() != 3.5)
-        {
-            if (event.getDamage() * 2.0 < fall_height.value())
-            {
+        if (damage_type == "fall" && fall_height.has_value() && fall_height.value() != 3.5) {
+            if (event.getDamage() * 2.0 < fall_height.value()) {
                 event.setCancelled(true);
                 return;
             }

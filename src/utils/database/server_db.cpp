@@ -7,16 +7,13 @@
 #include <iostream>
 #include <set>
 
-namespace primebds::db
-{
+namespace primebds::db {
 
-    ServerDB::ServerDB(const std::string &db_name) : DatabaseManager(db_name)
-    {
+    ServerDB::ServerDB(const std::string &db_name) : DatabaseManager(db_name) {
         createTables();
     }
 
-    void ServerDB::createTables()
-    {
+    void ServerDB::createTables() {
         createTable("server_info", {{"id", "INTEGER PRIMARY KEY CHECK (id = 1)"},
                                     {"last_shutdown_time", "INTEGER"},
                                     {"allowlist_profile", "TEXT"},
@@ -91,27 +88,21 @@ namespace primebds::db
                                          {"UNIQUE (rank_name, permission)", ""}});
 
         // Insert defaults
-        try
-        {
+        try {
             execute("INSERT OR IGNORE INTO server_info (id, last_shutdown_time) VALUES ('1', '0')");
             execute("INSERT OR IGNORE INTO home_settings (id, delay, cooldown, cost) VALUES ('1', '0', '0', '0')");
-        }
-        catch (...)
-        {
+        } catch (...) {
         }
     }
 
-    void ServerDB::updateServerInfo(const std::string &column, const std::string &value)
-    {
+    void ServerDB::updateServerInfo(const std::string &column, const std::string &value) {
         execute("UPDATE server_info SET " + column + " = ? WHERE id = 1", {value});
     }
 
-    ServerData ServerDB::getServerInfo()
-    {
+    ServerData ServerDB::getServerInfo() {
         auto row = queryRow("SELECT * FROM server_info WHERE id = 1");
         ServerData data;
-        if (row)
-        {
+        if (row) {
             auto &r = *row;
             data.last_shutdown_time = std::stoll(r["last_shutdown_time"]);
             data.allowlist_profile = r["allowlist_profile"];
@@ -126,17 +117,14 @@ namespace primebds::db
         return data;
     }
 
-    std::map<std::string, int> ServerDB::getGamerules()
-    {
+    std::map<std::string, int> ServerDB::getGamerules() {
         auto row = queryRow(
             "SELECT can_interact, can_emote, can_decay_leaves, can_change_skin, "
             "can_pickup_items, can_sleep, can_split_screen FROM server_info WHERE id = 1");
 
         std::map<std::string, int> rules;
-        if (row)
-        {
-            for (auto &[key, val] : *row)
-            {
+        if (row) {
+            for (auto &[key, val] : *row) {
                 rules[key] = std::stoi(val);
             }
         }
@@ -145,28 +133,24 @@ namespace primebds::db
 
     // --- Name bans ---
 
-    void ServerDB::addNameBan(const std::string &name, const std::string &reason, int64_t duration)
-    {
+    void ServerDB::addNameBan(const std::string &name, const std::string &reason, int64_t duration) {
         int64_t banned_until = duration > 0 ? static_cast<int64_t>(std::time(nullptr)) + duration : 0;
         execute("INSERT OR REPLACE INTO name_bans (name, banned_time, ban_reason) VALUES (?, ?, ?)",
                 {name, std::to_string(banned_until), reason});
     }
 
-    void ServerDB::removeNameBan(const std::string &name)
-    {
+    void ServerDB::removeNameBan(const std::string &name) {
         execute("DELETE FROM name_bans WHERE name = ?", {name});
     }
 
-    bool ServerDB::checkNameBan(const std::string &name)
-    {
+    bool ServerDB::checkNameBan(const std::string &name) {
         auto row = queryRow("SELECT banned_time FROM name_bans WHERE name = ?", {name});
         if (!row)
             return false;
         return std::time(nullptr) < std::stoll((*row)["banned_time"]);
     }
 
-    std::optional<NameBan> ServerDB::getNameBanInfo(const std::string &name)
-    {
+    std::optional<NameBan> ServerDB::getNameBanInfo(const std::string &name) {
         auto row = queryRow("SELECT * FROM name_bans WHERE name = ?", {name});
         if (!row)
             return std::nullopt;
@@ -178,12 +162,10 @@ namespace primebds::db
         return ban;
     }
 
-    std::vector<NameBan> ServerDB::getAllNameBans()
-    {
+    std::vector<NameBan> ServerDB::getAllNameBans() {
         auto rows = query("SELECT * FROM name_bans");
         std::vector<NameBan> bans;
-        for (auto &r : rows)
-        {
+        for (auto &r : rows) {
             NameBan ban;
             ban.name = r["name"];
             ban.banned_time = std::stoll(r["banned_time"]);
@@ -198,8 +180,7 @@ namespace primebds::db
     bool ServerDB::createWarp(const std::string &name, const std::string &pos_json,
                               const std::string &displayname, const std::string &category,
                               const std::string &description, double cost,
-                              double cooldown, double delay, const std::vector<std::string> &aliases)
-    {
+                              double cooldown, double delay, const std::vector<std::string> &aliases) {
         auto existing = queryRow("SELECT 1 FROM warps WHERE name = ? COLLATE NOCASE", {name});
         if (existing)
             return false;
@@ -213,8 +194,7 @@ namespace primebds::db
         return true;
     }
 
-    bool ServerDB::deleteWarp(const std::string &name)
-    {
+    bool ServerDB::deleteWarp(const std::string &name) {
         auto existing = queryRow("SELECT 1 FROM warps WHERE name = ? COLLATE NOCASE", {name});
         if (!existing)
             return false;
@@ -222,8 +202,7 @@ namespace primebds::db
         return true;
     }
 
-    std::optional<Warp> ServerDB::getWarp(const std::string &name)
-    {
+    std::optional<Warp> ServerDB::getWarp(const std::string &name) {
         auto row = queryRow("SELECT * FROM warps WHERE name = ? COLLATE NOCASE", {name});
         if (!row)
             return std::nullopt;
@@ -238,28 +217,22 @@ namespace primebds::db
         w.cooldown = std::stod((*row)["cooldown"]);
         w.delay = std::stod((*row)["delay"]);
 
-        try
-        {
+        try {
             auto aliases_str = (*row)["aliases"];
-            if (!aliases_str.empty())
-            {
+            if (!aliases_str.empty()) {
                 auto j = nlohmann::json::parse(aliases_str);
                 w.aliases = j.get<std::vector<std::string>>();
             }
-        }
-        catch (...)
-        {
+        } catch (...) {
         }
 
         return w;
     }
 
-    std::vector<Warp> ServerDB::getAllWarps()
-    {
+    std::vector<Warp> ServerDB::getAllWarps() {
         auto rows = query("SELECT * FROM warps");
         std::vector<Warp> warps;
-        for (auto &r : rows)
-        {
+        for (auto &r : rows) {
             Warp w;
             w.name = r["name"];
             w.pos = r["pos"];
@@ -269,15 +242,11 @@ namespace primebds::db
             w.cost = std::stod(r["cost"]);
             w.cooldown = std::stod(r["cooldown"]);
             w.delay = std::stod(r["delay"]);
-            try
-            {
-                if (!r["aliases"].empty())
-                {
+            try {
+                if (!r["aliases"].empty()) {
                     w.aliases = nlohmann::json::parse(r["aliases"]).get<std::vector<std::string>>();
                 }
-            }
-            catch (...)
-            {
+            } catch (...) {
             }
             warps.push_back(w);
         }
@@ -285,8 +254,7 @@ namespace primebds::db
     }
 
     bool ServerDB::updateWarpProperty(const std::string &name, const std::string &field,
-                                      const std::string &value)
-    {
+                                      const std::string &value) {
         static const std::set<std::string> allowed = {"pos", "displayname", "category",
                                                       "description", "cost", "cooldown",
                                                       "delay", "aliases"};
@@ -301,22 +269,18 @@ namespace primebds::db
         return true;
     }
 
-    bool ServerDB::addAlias(const std::string &warp_name, const std::string &alias)
-    {
+    bool ServerDB::addAlias(const std::string &warp_name, const std::string &alias) {
         auto row =
             queryRow("SELECT aliases FROM warps WHERE name = ? COLLATE NOCASE", {warp_name});
         if (!row)
             return false;
 
         std::vector<std::string> aliases;
-        try
-        {
+        try {
             auto &s = (*row)["aliases"];
             if (!s.empty())
                 aliases = nlohmann::json::parse(s).get<std::vector<std::string>>();
-        }
-        catch (...)
-        {
+        } catch (...) {
         }
 
         std::string lower_alias = alias;
@@ -332,22 +296,18 @@ namespace primebds::db
         return true;
     }
 
-    bool ServerDB::removeAlias(const std::string &warp_name, const std::string &alias)
-    {
+    bool ServerDB::removeAlias(const std::string &warp_name, const std::string &alias) {
         auto row =
             queryRow("SELECT aliases FROM warps WHERE name = ? COLLATE NOCASE", {warp_name});
         if (!row)
             return false;
 
         std::vector<std::string> aliases;
-        try
-        {
+        try {
             auto &s = (*row)["aliases"];
             if (!s.empty())
                 aliases = nlohmann::json::parse(s).get<std::vector<std::string>>();
-        }
-        catch (...)
-        {
+        } catch (...) {
         }
 
         std::string lower_alias = alias;
@@ -367,8 +327,7 @@ namespace primebds::db
     // --- Homes ---
 
     bool ServerDB::createHome(const std::string &xuid, const std::string &username,
-                              const std::string &name, const std::string &pos_json)
-    {
+                              const std::string &name, const std::string &pos_json) {
         auto existing = queryRow("SELECT 1 FROM homes WHERE xuid = ? AND name = ?", {xuid, name});
         if (existing)
             return false;
@@ -379,8 +338,7 @@ namespace primebds::db
     }
 
     bool ServerDB::deleteHome(const std::string &name, const std::string &username,
-                              const std::string &xuid)
-    {
+                              const std::string &xuid) {
         auto existing =
             queryRow("SELECT 1 FROM homes WHERE (xuid = ? OR username = ?) AND name = ?",
                      {xuid, username, name});
@@ -393,8 +351,7 @@ namespace primebds::db
     }
 
     std::optional<Home> ServerDB::getHome(const std::string &name, const std::string &username,
-                                          const std::string &xuid)
-    {
+                                          const std::string &xuid) {
         auto row = queryRow(
             "SELECT * FROM homes WHERE (xuid = ? OR username = ?) AND name = ?",
             {xuid, username, name});
@@ -413,12 +370,10 @@ namespace primebds::db
     }
 
     std::map<std::string, Home> ServerDB::getAllHomes(const std::string &username,
-                                                      const std::string &xuid)
-    {
+                                                      const std::string &xuid) {
         auto rows = query("SELECT * FROM homes WHERE xuid = ? OR username = ?", {xuid, username});
         std::map<std::string, Home> homes;
-        for (auto &r : rows)
-        {
+        for (auto &r : rows) {
             Home h;
             h.xuid = r["xuid"];
             h.username = r["username"];
@@ -432,12 +387,10 @@ namespace primebds::db
         return homes;
     }
 
-    HomeSettings ServerDB::getHomeSettings()
-    {
+    HomeSettings ServerDB::getHomeSettings() {
         auto row = queryRow("SELECT * FROM home_settings WHERE id = 1");
         HomeSettings settings;
-        if (row)
-        {
+        if (row) {
             settings.delay = std::stod((*row)["delay"]);
             settings.cooldown = std::stod((*row)["cooldown"]);
             settings.cost = std::stod((*row)["cost"]);
@@ -445,20 +398,17 @@ namespace primebds::db
         return settings;
     }
 
-    void ServerDB::setHomeSettings(double delay, double cooldown, double cost)
-    {
+    void ServerDB::setHomeSettings(double delay, double cooldown, double cost) {
         execute(
             "INSERT OR REPLACE INTO home_settings (id, delay, cooldown, cost) VALUES ('1', ?, ?, ?)",
             {std::to_string(delay), std::to_string(cooldown), std::to_string(cost)});
     }
 
-    void ServerDB::setSpawn(const std::string &pos_json)
-    {
+    void ServerDB::setSpawn(const std::string &pos_json) {
         execute("INSERT OR REPLACE INTO spawns (id, pos) VALUES ('1', ?)", {pos_json});
     }
 
-    std::optional<Spawn> ServerDB::getSpawn()
-    {
+    std::optional<Spawn> ServerDB::getSpawn() {
         auto row = queryRow("SELECT * FROM spawns WHERE id = 1");
         if (!row)
             return std::nullopt;
@@ -472,8 +422,7 @@ namespace primebds::db
     }
 
     std::string ServerDB::encodeLocation(double x, double y, double z,
-                                         const std::string &dimension, float pitch, float yaw)
-    {
+                                         const std::string &dimension, float pitch, float yaw) {
         nlohmann::json j;
         j["x"] = x;
         j["y"] = y;
@@ -484,8 +433,7 @@ namespace primebds::db
         return j.dump();
     }
 
-    nlohmann::json ServerDB::decodeLocation(const std::string &pos_str)
-    {
+    nlohmann::json ServerDB::decodeLocation(const std::string &pos_str) {
         return nlohmann::json::parse(pos_str);
     }
 
@@ -493,8 +441,7 @@ namespace primebds::db
     // Allowlist
     // ---------------------------------------------------------------------------
 
-    std::vector<std::string> ServerDB::getAllowlistEntries()
-    {
+    std::vector<std::string> ServerDB::getAllowlistEntries() {
         auto rows = query("SELECT name FROM allowlist");
         std::vector<std::string> result;
         for (auto &r : rows)
@@ -502,34 +449,29 @@ namespace primebds::db
         return result;
     }
 
-    bool ServerDB::addToAllowlist(const std::string &name)
-    {
+    bool ServerDB::addToAllowlist(const std::string &name) {
         if (isOnAllowlist(name))
             return false;
         execute("INSERT INTO allowlist (name) VALUES (?)", {name});
         return true;
     }
 
-    bool ServerDB::removeFromAllowlist(const std::string &name)
-    {
+    bool ServerDB::removeFromAllowlist(const std::string &name) {
         if (!isOnAllowlist(name))
             return false;
         execute("DELETE FROM allowlist WHERE name = ?", {name});
         return true;
     }
 
-    bool ServerDB::isOnAllowlist(const std::string &name)
-    {
+    bool ServerDB::isOnAllowlist(const std::string &name) {
         auto row = queryRow("SELECT name FROM allowlist WHERE name = ?", {name});
         return row.has_value();
     }
 
-    std::vector<AllowlistProfile> ServerDB::getAllowlistProfiles()
-    {
+    std::vector<AllowlistProfile> ServerDB::getAllowlistProfiles() {
         auto rows = query("SELECT * FROM allowlist_profiles");
         std::vector<AllowlistProfile> result;
-        for (auto &r : rows)
-        {
+        for (auto &r : rows) {
             AllowlistProfile p;
             p.name = r["name"];
             p.active = r["active"] == "1";
@@ -539,8 +481,7 @@ namespace primebds::db
         return result;
     }
 
-    bool ServerDB::createAllowlistProfile(const std::string &name)
-    {
+    bool ServerDB::createAllowlistProfile(const std::string &name) {
         auto existing = queryRow("SELECT name FROM allowlist_profiles WHERE name = ?", {name});
         if (existing.has_value())
             return false;
@@ -548,8 +489,7 @@ namespace primebds::db
         return true;
     }
 
-    bool ServerDB::deleteAllowlistProfile(const std::string &name)
-    {
+    bool ServerDB::deleteAllowlistProfile(const std::string &name) {
         auto existing = queryRow("SELECT name FROM allowlist_profiles WHERE name = ?", {name});
         if (!existing.has_value())
             return false;
@@ -557,8 +497,7 @@ namespace primebds::db
         return true;
     }
 
-    bool ServerDB::setActiveAllowlistProfile(const std::string &name)
-    {
+    bool ServerDB::setActiveAllowlistProfile(const std::string &name) {
         auto existing = queryRow("SELECT name FROM allowlist_profiles WHERE name = ?", {name});
         if (!existing.has_value())
             return false;
@@ -567,8 +506,7 @@ namespace primebds::db
         return true;
     }
 
-    bool ServerDB::setAllowlistInheritance(const std::string &profile, const std::string &parent)
-    {
+    bool ServerDB::setAllowlistInheritance(const std::string &profile, const std::string &parent) {
         auto existing = queryRow("SELECT name FROM allowlist_profiles WHERE name = ?", {profile});
         if (!existing.has_value())
             return false;
@@ -576,8 +514,7 @@ namespace primebds::db
         return true;
     }
 
-    void ServerDB::clearAllowlist()
-    {
+    void ServerDB::clearAllowlist() {
         execute("DELETE FROM allowlist", {});
     }
 
@@ -585,12 +522,10 @@ namespace primebds::db
     // Ranks
     // ---------------------------------------------------------------------------
 
-    std::vector<Rank> ServerDB::getAllRanks()
-    {
+    std::vector<Rank> ServerDB::getAllRanks() {
         auto rows = query("SELECT * FROM ranks");
         std::vector<Rank> result;
-        for (auto &r : rows)
-        {
+        for (auto &r : rows) {
             Rank rank;
             rank.name = r["name"];
             rank.weight = r.count("weight") ? std::stoi(r.at("weight")) : 0;
@@ -606,8 +541,7 @@ namespace primebds::db
         return result;
     }
 
-    bool ServerDB::createRank(const std::string &name)
-    {
+    bool ServerDB::createRank(const std::string &name) {
         auto existing = queryRow("SELECT name FROM ranks WHERE name = ?", {name});
         if (existing.has_value())
             return false;
@@ -615,8 +549,7 @@ namespace primebds::db
         return true;
     }
 
-    bool ServerDB::deleteRank(const std::string &name)
-    {
+    bool ServerDB::deleteRank(const std::string &name) {
         auto existing = queryRow("SELECT name FROM ranks WHERE name = ?", {name});
         if (!existing.has_value())
             return false;
@@ -625,8 +558,7 @@ namespace primebds::db
         return true;
     }
 
-    std::optional<Rank> ServerDB::getRank(const std::string &name)
-    {
+    std::optional<Rank> ServerDB::getRank(const std::string &name) {
         auto row = queryRow("SELECT * FROM ranks WHERE name = ?", {name});
         if (!row.has_value())
             return std::nullopt;
@@ -642,8 +574,7 @@ namespace primebds::db
         return rank;
     }
 
-    bool ServerDB::addRankPermission(const std::string &rank, const std::string &perm)
-    {
+    bool ServerDB::addRankPermission(const std::string &rank, const std::string &perm) {
         auto existing = queryRow("SELECT name FROM ranks WHERE name = ?", {rank});
         if (!existing.has_value())
             return false;
@@ -651,8 +582,7 @@ namespace primebds::db
         return true;
     }
 
-    bool ServerDB::removeRankPermission(const std::string &rank, const std::string &perm)
-    {
+    bool ServerDB::removeRankPermission(const std::string &rank, const std::string &perm) {
         auto existing = queryRow("SELECT name FROM ranks WHERE name = ?", {rank});
         if (!existing.has_value())
             return false;
@@ -660,23 +590,19 @@ namespace primebds::db
         return true;
     }
 
-    void ServerDB::setRankInheritance(const std::string &rank, const std::string &parent)
-    {
+    void ServerDB::setRankInheritance(const std::string &rank, const std::string &parent) {
         execute("UPDATE ranks SET inherits = ? WHERE name = ?", {parent, rank});
     }
 
-    void ServerDB::setRankWeight(const std::string &rank, int weight)
-    {
+    void ServerDB::setRankWeight(const std::string &rank, int weight) {
         execute("UPDATE ranks SET weight = ? WHERE name = ?", {std::to_string(weight), rank});
     }
 
-    void ServerDB::setRankPrefix(const std::string &rank, const std::string &prefix)
-    {
+    void ServerDB::setRankPrefix(const std::string &rank, const std::string &prefix) {
         execute("UPDATE ranks SET prefix = ? WHERE name = ?", {prefix, rank});
     }
 
-    void ServerDB::setRankSuffix(const std::string &rank, const std::string &suffix)
-    {
+    void ServerDB::setRankSuffix(const std::string &rank, const std::string &suffix) {
         execute("UPDATE ranks SET suffix = ? WHERE name = ?", {suffix, rank});
     }
 

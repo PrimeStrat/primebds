@@ -7,15 +7,12 @@
 
 #include <string>
 
-namespace primebds::handlers::preprocesses
-{
+namespace primebds::handlers::preprocesses {
 
     bool handleWhisperCommand(PrimeBDS &plugin, endstone::Player &sender,
-                              const std::string &target_name, const std::string &message)
-    {
+                              const std::string &target_name, const std::string &message) {
         auto *target = plugin.getServer().getPlayer(target_name);
-        if (!target)
-        {
+        if (!target) {
             sender.sendMessage("\u00a7cPlayer '" + target_name + "' is not online");
             return true;
         }

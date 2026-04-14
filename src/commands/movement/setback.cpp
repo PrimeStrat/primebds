@@ -1,14 +1,23 @@
+/// @file setback.cpp
+/// Sets the global cooldown and delay for /back!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
 #include <cstdlib>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_setback(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(setback, "Sets the global cooldown and delay for /back!", cmd_setback,
+                     info.usages = {"/setback [delay: int] [cooldown: int]"};
+                     info.permissions = {"primebds.command.setback"};);
+
+    /// Sets the global cooldown and delay for /back!
     static bool cmd_setback(PrimeBDS &plugin, endstone::CommandSender &sender,
-                            const std::vector<std::string> &args)
-    {
+                            const std::vector<std::string> &args) {
         double delay = (!args.empty()) ? std::atof(args[0].c_str()) : 0.0;
         double cooldown = (args.size() >= 2) ? std::atof(args[1].c_str()) : 0.0;
 
@@ -18,7 +27,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(setback, "Sets the global cooldown and delay for /back!", cmd_setback,
-                     info.usages = {"/setback [delay: int] [cooldown: int]"};
-                     info.permissions = {"primebds.command.setback"};);
 } // namespace primebds::commands

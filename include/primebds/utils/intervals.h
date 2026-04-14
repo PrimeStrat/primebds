@@ -10,11 +10,9 @@
 #include <string>
 #include <vector>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
-    class IntervalManager
-    {
+    class IntervalManager {
     public:
         using CheckFunc = std::function<void()>;
 

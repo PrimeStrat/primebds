@@ -9,8 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace primebds::handlers::combat
-{
+namespace primebds::handlers::combat {
 
     std::optional<double> getCustomTag(const nlohmann::json &config,
                                        const std::vector<std::string> &tags,

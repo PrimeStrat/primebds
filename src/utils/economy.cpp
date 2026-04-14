@@ -3,11 +3,9 @@
 
 #include "primebds/utils/economy.h"
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
-    endstone::Plugin *getEconomyLink(endstone::Server &server)
-    {
+    endstone::Plugin *getEconomyLink(endstone::Server &server) {
         return server.getPluginManager().getPlugin("umoney");
     }
 

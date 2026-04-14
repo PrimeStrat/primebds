@@ -11,11 +11,9 @@
 #include <functional>
 #include <sqlite3.h>
 
-namespace primebds::db
-{
+namespace primebds::db {
 
-    class DatabaseManager
-    {
+    class DatabaseManager {
     public:
         explicit DatabaseManager(const std::string &db_name);
         virtual ~DatabaseManager();

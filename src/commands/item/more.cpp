@@ -1,22 +1,29 @@
+/// @file more.cpp
+/// Sets a full stack to the held item!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_more(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(more, "Sets a full stack to the held item!", cmd_more,
+                     info.usages = {"/more"};
+                     info.permissions = {"primebds.command.more"};);
+
+    /// Sets a full stack to the held item!
     static bool cmd_more(PrimeBDS &plugin, endstone::CommandSender &sender,
-                         const std::vector<std::string> &args)
-    {
+                         const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cThis command can only be executed by a player");
             return false;
         }
 
         auto held = player->getInventory().getItemInMainHand();
-        if (!held || held->getType() == endstone::ItemType::Air)
-        {
+        if (!held || held->getType() == endstone::ItemType::Air) {
             sender.sendMessage("\u00a7cYou are not holding an item to stack");
             return false;
         }
@@ -27,7 +34,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(more, "Sets a full stack to the held item!", cmd_more,
-                     info.usages = {"/more"};
-                     info.permissions = {"primebds.command.more"};);
 } // namespace primebds::commands

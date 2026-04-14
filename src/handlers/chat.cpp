@@ -12,15 +12,12 @@
 #include <chrono>
 #include <regex>
 
-namespace primebds::handlers
-{
+namespace primebds::handlers {
 
-    static std::string escapeBraces(const std::string &s)
-    {
+    static std::string escapeBraces(const std::string &s) {
         std::string out;
         out.reserve(s.size());
-        for (char c : s)
-        {
+        for (char c : s) {
             if (c == '{')
                 out += "{{";
             else if (c == '}')
@@ -31,8 +28,7 @@ namespace primebds::handlers
         return out;
     }
 
-    void handleChatEvent(PrimeBDS &plugin, endstone::PlayerChatEvent &event)
-    {
+    void handleChatEvent(PrimeBDS &plugin, endstone::PlayerChatEvent &event) {
         auto &player = event.getPlayer();
         auto xuid = player.getXuid();
 
@@ -41,29 +37,24 @@ namespace primebds::handlers
         auto [ip_muted, ip_mute_time, ip_mute_reason] = plugin.db->checkIpMute(player.getAddress().getHostname());
 
         // Global mute check
-        if (plugin.globalmute == 1 && !player.hasPermission("primebds.globalmute.exempt"))
-        {
+        if (plugin.globalmute == 1 && !player.hasPermission("primebds.globalmute.exempt")) {
             player.sendMessage("§cGlobal chat is currently muted by an admin");
             event.setCancelled(true);
             return;
         }
 
         // Silent mute check
-        if (plugin.silentmutes.count(xuid))
-        {
+        if (plugin.silentmutes.count(xuid)) {
             event.setCancelled(true);
             player.sendMessage("§cYour chats are currently disabled");
             return;
         }
 
         // Mute check
-        if (user_muted || ip_muted)
-        {
-            if (user_muted)
-            {
+        if (user_muted || ip_muted) {
+            if (user_muted) {
                 auto mod = plugin.db->getModLog(xuid);
-                if (mod)
-                {
+                if (mod) {
                     player.sendMessage(
                         "§6You are currently muted.\n"
                         "§6Expires: §e" +
@@ -71,9 +62,7 @@ namespace primebds::handlers
                                                                      "§6Reason: §e" +
                         mod->mute_reason);
                 }
-            }
-            else
-            {
+            } else {
                 player.sendMessage(
                     "§6You are currently muted.\n"
                     "§6Expires: §e" +
@@ -89,8 +78,7 @@ namespace primebds::handlers
 
         // Staff chat check
         auto user = plugin.db->getOnlineUser(xuid);
-        if (user && user->enabled_sc)
-        {
+        if (user && user->enabled_sc) {
             auto sc_cfg = cfg.getModule("better_chat");
             auto safe_msg = escapeBraces(event.getMessage());
             auto msg = "§7[Staff] §e" + player.getName() + "§7: §6" + safe_msg;
@@ -110,8 +98,7 @@ namespace primebds::handlers
         double last_time = (last_it != plugin.chat_cooldown.end()) ? last_it->second : 0.0;
         double elapsed = now - last_time;
 
-        if (elapsed < cooldown)
-        {
+        if (elapsed < cooldown) {
             double remaining = cooldown - elapsed;
             char buf[64];
             snprintf(buf, sizeof(buf), "%.2f", remaining);
@@ -123,8 +110,7 @@ namespace primebds::handlers
 
         // Enhanced chat formatting
         bool enhanced = chat_cfg.value("enabled", true);
-        if (enhanced && user)
-        {
+        if (enhanced && user) {
             auto &perms = permissions::PermissionManager::instance();
             auto prefix = escapeBraces(perms.getPrefix(user->internal_rank));
             auto suffix = escapeBraces(perms.getSuffix(user->internal_rank));

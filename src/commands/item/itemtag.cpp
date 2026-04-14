@@ -1,3 +1,6 @@
+/// @file itemtag.cpp
+/// Modify item tags!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/target_selector.h"
@@ -5,14 +8,19 @@
 #include <algorithm>
 #include <string>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_itemtag(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(itemtag, "Modify item tags!", cmd_itemtag,
+                     info.usages = {"/itemtag <player: player> (unbreakable) <value: bool>"};
+                     info.permissions = {"primebds.command.itemtag"};);
+
+    /// Modify item tags!
     static bool cmd_itemtag(PrimeBDS &plugin, endstone::CommandSender &sender,
-                            const std::vector<std::string> &args)
-    {
-        if (args.size() < 3)
-        {
+                            const std::vector<std::string> &args) {
+        if (args.size() < 3) {
             sender.sendMessage("\u00a7cUsage: /itemtag <player> <unbreakable> <true|false>");
             return false;
         }
@@ -23,8 +31,7 @@ namespace primebds::commands
         std::transform(val_str.begin(), val_str.end(), val_str.begin(), ::tolower);
         bool value = (val_str == "true" || val_str == "1" || val_str == "yes" || val_str == "on");
 
-        for (auto *t : targets)
-        {
+        for (auto *t : targets) {
             auto *p = dynamic_cast<endstone::Player *>(t);
             if (!p)
                 continue;
@@ -42,7 +49,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(itemtag, "Modify item tags!", cmd_itemtag,
-                     info.usages = {"/itemtag <player: player> (unbreakable) <value: bool>"};
-                     info.permissions = {"primebds.command.itemtag"};);
 } // namespace primebds::commands

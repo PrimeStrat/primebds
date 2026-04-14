@@ -6,11 +6,9 @@
 
 #include <ctime>
 
-namespace primebds::handlers::connections
-{
+namespace primebds::handlers::connections {
 
-    void handleKickEvent(PrimeBDS &plugin, endstone::PlayerKickEvent &event)
-    {
+    void handleKickEvent(PrimeBDS &plugin, endstone::PlayerKickEvent &event) {
         auto &player = event.getPlayer();
         plugin.sldb->endSession(player.getXuid());
     }

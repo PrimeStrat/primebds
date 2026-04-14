@@ -9,16 +9,14 @@
 #include <string>
 #include <vector>
 
-namespace primebds
-{
+namespace primebds {
 
     class PrimeBDS;
 
     using CommandHandler = std::function<bool(PrimeBDS &, endstone::CommandSender &,
                                               const std::vector<std::string> &)>;
 
-    struct CommandInfo
-    {
+    struct CommandInfo {
         std::string name;
         std::string description;
         std::vector<std::string> usages;
@@ -27,14 +25,12 @@ namespace primebds
         std::vector<std::string> aliases;
     };
 
-    struct CommandRegistration
-    {
+    struct CommandRegistration {
         CommandInfo info;
         CommandHandler handler;
     };
 
-    class CommandRegistry
-    {
+    class CommandRegistry {
     public:
         static CommandRegistry &instance();
 

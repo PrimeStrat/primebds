@@ -5,32 +5,27 @@
 
 #include <nlohmann/json.hpp>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
     // --- ActionFormBuilder ---
 
-    ActionFormBuilder &ActionFormBuilder::title(const std::string &t)
-    {
+    ActionFormBuilder &ActionFormBuilder::title(const std::string &t) {
         title_ = t;
         return *this;
     }
 
-    ActionFormBuilder &ActionFormBuilder::body(const std::string &b)
-    {
+    ActionFormBuilder &ActionFormBuilder::body(const std::string &b) {
         body_ = b;
         return *this;
     }
 
-    ActionFormBuilder &ActionFormBuilder::button(const std::string &text, const std::string &icon)
-    {
+    ActionFormBuilder &ActionFormBuilder::button(const std::string &text, const std::string &icon) {
         buttons_.push_back({text, icon});
         return *this;
     }
 
     void ActionFormBuilder::show(endstone::Player &player,
-                                 std::function<void(std::optional<int>)> callback)
-    {
+                                 std::function<void(std::optional<int>)> callback) {
         endstone::ActionForm form;
         form.setTitle(title_);
         form.setContent(body_);
@@ -39,12 +34,10 @@ namespace primebds::utils
             form.addButton(btn.text, btn.icon.empty() ? "" : btn.icon);
 
         auto cb = std::move(callback);
-        form.setOnSubmit([cb](endstone::Player *, int selection)
-                         {
+        form.setOnSubmit([cb](endstone::Player *, int selection) {
         if (cb)
             cb(selection); });
-        form.setOnClose([cb](endstone::Player *)
-                        {
+        form.setOnClose([cb](endstone::Player *) {
         if (cb)
             cb(std::nullopt); });
 
@@ -53,16 +46,14 @@ namespace primebds::utils
 
     // --- ModalFormBuilder ---
 
-    ModalFormBuilder &ModalFormBuilder::title(const std::string &t)
-    {
+    ModalFormBuilder &ModalFormBuilder::title(const std::string &t) {
         title_ = t;
         return *this;
     }
 
     ModalFormBuilder &ModalFormBuilder::dropdown(const std::string &label,
                                                  const std::vector<std::string> &options,
-                                                 int default_index)
-    {
+                                                 int default_index) {
         FormElement el;
         el.type = "dropdown";
         el.label = label;
@@ -73,8 +64,7 @@ namespace primebds::utils
     }
 
     ModalFormBuilder &ModalFormBuilder::slider(const std::string &label, float min, float max,
-                                               float step, float default_val)
-    {
+                                               float step, float default_val) {
         FormElement el;
         el.type = "slider";
         el.label = label;
@@ -88,8 +78,7 @@ namespace primebds::utils
 
     ModalFormBuilder &ModalFormBuilder::textInput(const std::string &label,
                                                   const std::string &placeholder,
-                                                  const std::string &default_val)
-    {
+                                                  const std::string &default_val) {
         FormElement el;
         el.type = "text_input";
         el.label = label;
@@ -99,8 +88,7 @@ namespace primebds::utils
         return *this;
     }
 
-    ModalFormBuilder &ModalFormBuilder::toggle(const std::string &label, bool default_val)
-    {
+    ModalFormBuilder &ModalFormBuilder::toggle(const std::string &label, bool default_val) {
         FormElement el;
         el.type = "toggle";
         el.label = label;
@@ -110,13 +98,11 @@ namespace primebds::utils
     }
 
     void ModalFormBuilder::show(endstone::Player &player,
-                                std::function<void(std::optional<std::vector<std::variant<int, float, std::string, bool>>>)> callback)
-    {
+                                std::function<void(std::optional<std::vector<std::variant<int, float, std::string, bool>>>)> callback) {
         endstone::ModalForm form;
         form.setTitle(title_);
 
-        for (auto &el : elements_)
-        {
+        for (auto &el : elements_) {
             if (el.type == "dropdown")
                 form.addControl(endstone::Dropdown(el.label, el.options, el.default_int));
             else if (el.type == "slider")
@@ -128,8 +114,7 @@ namespace primebds::utils
         }
 
         auto cb = std::move(callback);
-        form.setOnSubmit([cb](endstone::Player *, const std::string &data)
-                         {
+        form.setOnSubmit([cb](endstone::Player *, const std::string &data) {
         if (!cb)
             return;
         try {
@@ -146,12 +131,10 @@ namespace primebds::utils
                     values.emplace_back(v.get<std::string>());
             }
             cb(values);
-        }
-        catch (...) {
+        } catch (...) {
             cb(std::nullopt);
         } });
-        form.setOnClose([cb](endstone::Player *)
-                        {
+        form.setOnClose([cb](endstone::Player *) {
         if (cb)
             cb(std::nullopt); });
 
@@ -160,33 +143,28 @@ namespace primebds::utils
 
     // --- MessageFormBuilder ---
 
-    MessageFormBuilder &MessageFormBuilder::title(const std::string &t)
-    {
+    MessageFormBuilder &MessageFormBuilder::title(const std::string &t) {
         title_ = t;
         return *this;
     }
 
-    MessageFormBuilder &MessageFormBuilder::body(const std::string &b)
-    {
+    MessageFormBuilder &MessageFormBuilder::body(const std::string &b) {
         body_ = b;
         return *this;
     }
 
-    MessageFormBuilder &MessageFormBuilder::button1(const std::string &text)
-    {
+    MessageFormBuilder &MessageFormBuilder::button1(const std::string &text) {
         button1_ = text;
         return *this;
     }
 
-    MessageFormBuilder &MessageFormBuilder::button2(const std::string &text)
-    {
+    MessageFormBuilder &MessageFormBuilder::button2(const std::string &text) {
         button2_ = text;
         return *this;
     }
 
     void MessageFormBuilder::show(endstone::Player &player,
-                                  std::function<void(std::optional<bool>)> callback)
-    {
+                                  std::function<void(std::optional<bool>)> callback) {
         endstone::MessageForm form;
         form.setTitle(title_);
         form.setContent(body_);
@@ -194,12 +172,10 @@ namespace primebds::utils
         form.setButton2(button2_);
 
         auto cb = std::move(callback);
-        form.setOnSubmit([cb](endstone::Player *, int selection)
-                         {
+        form.setOnSubmit([cb](endstone::Player *, int selection) {
         if (cb)
             cb(selection == 0); });
-        form.setOnClose([cb](endstone::Player *)
-                        {
+        form.setOnClose([cb](endstone::Player *) {
         if (cb)
             cb(std::nullopt); });
 

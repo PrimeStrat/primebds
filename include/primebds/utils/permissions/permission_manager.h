@@ -12,11 +12,9 @@
 #include <unordered_map>
 #include <vector>
 
-namespace primebds::permissions
-{
+namespace primebds::permissions {
 
-    class PermissionManager
-    {
+    class PermissionManager {
     public:
         static PermissionManager &instance();
 

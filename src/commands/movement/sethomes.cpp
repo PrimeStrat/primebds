@@ -1,14 +1,23 @@
+/// @file sethomes.cpp
+/// Set global home settings (delay, cooldown, cost)!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
 #include <cstdlib>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_sethomes(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(sethomes, "Set global home settings (delay, cooldown, cost)!", cmd_sethomes,
+                     info.usages = {"/sethomes <delay: int> <cooldown: int> <cost: int>"};
+                     info.permissions = {"primebds.command.sethomes"};);
+
+    /// Set global home settings (delay, cooldown, cost)!
     static bool cmd_sethomes(PrimeBDS &plugin, endstone::CommandSender &sender,
-                             const std::vector<std::string> &args)
-    {
+                             const std::vector<std::string> &args) {
         double delay = (!args.empty()) ? std::atof(args[0].c_str()) : 0.0;
         double cooldown = (args.size() >= 2) ? std::atof(args[1].c_str()) : 0.0;
         double cost = (args.size() >= 3) ? std::atof(args[2].c_str()) : 0.0;
@@ -24,7 +33,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(sethomes, "Set global home settings (delay, cooldown, cost)!", cmd_sethomes,
-                     info.usages = {"/sethomes <delay: int> <cooldown: int> <cost: int>"};
-                     info.permissions = {"primebds.command.sethomes"};);
 } // namespace primebds::commands

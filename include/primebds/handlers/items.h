@@ -5,13 +5,11 @@
 
 #include <endstone/endstone.hpp>
 
-namespace primebds
-{
+namespace primebds {
     class PrimeBDS;
 }
 
-namespace primebds::handlers
-{
+namespace primebds::handlers {
 
     void handleItemPickupEvent(PrimeBDS &plugin, endstone::PlayerPickupItemEvent &event);
 

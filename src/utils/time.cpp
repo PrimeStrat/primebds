@@ -13,11 +13,9 @@
 inline time_t timegm(struct tm *tm) { return _mkgmtime(tm); }
 #endif
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
-    bool isDst(int64_t timestamp)
-    {
+    bool isDst(int64_t timestamp) {
         time_t t = static_cast<time_t>(timestamp);
         struct tm utc_tm;
 #ifdef _WIN32
@@ -44,12 +42,10 @@ namespace primebds::utils
 #endif
 
         int sundays = 0;
-        while (sundays < 2)
-        {
+        while (sundays < 2) {
             if (dst_start.tm_wday == 0)
                 sundays++;
-            if (sundays < 2)
-            {
+            if (sundays < 2) {
                 dst_start.tm_mday++;
                 ds_time = timegm(&dst_start);
 #ifdef _WIN32
@@ -74,8 +70,7 @@ namespace primebds::utils
         gmtime_r(&de_time, &dst_end);
 #endif
 
-        while (dst_end.tm_wday != 0)
-        {
+        while (dst_end.tm_wday != 0) {
             dst_end.tm_mday++;
             de_time = timegm(&dst_end);
 #ifdef _WIN32
@@ -88,8 +83,7 @@ namespace primebds::utils
         return (timestamp >= ds_time && timestamp < de_time);
     }
 
-    std::string convertToTimezone(int64_t timestamp, const std::string &timezone)
-    {
+    std::string convertToTimezone(int64_t timestamp, const std::string &timezone) {
         int offset = -5; // EST default
         if (timezone == "EDT")
             offset = -4;

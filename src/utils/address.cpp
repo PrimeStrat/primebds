@@ -17,11 +17,9 @@
 #include <sys/socket.h>
 #endif
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
-    bool isValidIp(const std::string &ip)
-    {
+    bool isValidIp(const std::string &ip) {
         // Try IPv4
         struct in_addr addr4;
         if (inet_pton(AF_INET, ip.c_str(), &addr4) == 1)
@@ -38,12 +36,10 @@ namespace primebds::utils
         return std::regex_match(ip, hostname_re);
     }
 
-    bool isValidPort(const std::string &port_str)
-    {
+    bool isValidPort(const std::string &port_str) {
         if (port_str.empty())
             return false;
-        for (char c : port_str)
-        {
+        for (char c : port_str) {
             if (!std::isdigit(static_cast<unsigned char>(c)))
                 return false;
         }
@@ -51,16 +47,14 @@ namespace primebds::utils
         return port >= 1 && port <= 65535;
     }
 
-    std::string stripPort(const std::string &ip_with_port)
-    {
+    std::string stripPort(const std::string &ip_with_port) {
         if (ip_with_port.empty())
             return {};
         auto pos = ip_with_port.find(':');
         return pos != std::string::npos ? ip_with_port.substr(0, pos) : ip_with_port;
     }
 
-    bool sameSubnet(const std::string &ip1, const std::string &ip2, int subnet_mask)
-    {
+    bool sameSubnet(const std::string &ip1, const std::string &ip2, int subnet_mask) {
         auto clean1 = stripPort(ip1);
         auto clean2 = stripPort(ip2);
 

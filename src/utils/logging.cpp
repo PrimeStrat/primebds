@@ -17,18 +17,15 @@
 #include <cstring>
 #endif
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
-    static std::string stripColorCodes(const std::string &msg)
-    {
+    static std::string stripColorCodes(const std::string &msg) {
         static const std::regex color_re("§.");
         return std::regex_replace(msg, color_re, "");
     }
 
     void log(endstone::Server &server, const std::string &message,
-             const std::string &type, const std::string &permission)
-    {
+             const std::string &type, const std::string &permission) {
         // Discord relay in background thread
         std::thread([=]()
                     { discordRelay(message, type); })
@@ -38,15 +35,13 @@ namespace primebds::utils
         if (permission.empty())
             return;
 
-        for (auto *player : server.getOnlinePlayers())
-        {
+        for (auto *player : server.getOnlinePlayers()) {
             if (player->hasPermission(permission))
                 player->sendMessage(message);
         }
     }
 
-    void discordRelay(const std::string &message, const std::string &type)
-    {
+    void discordRelay(const std::string &message, const std::string &type) {
         auto cleaned = stripColorCodes(message);
 
         auto &cfg = config::ConfigManager::instance();
@@ -69,14 +64,11 @@ namespace primebds::utils
         // Build payload
         nlohmann::json payload;
         auto embed_cfg = discord.value("embed_for_log", nlohmann::json::object());
-        if (embed_cfg.value("enabled", false))
-        {
+        if (embed_cfg.value("enabled", false)) {
             payload["embeds"] = nlohmann::json::array({{{"title", embed_cfg.value("title", "Log")},
                                                         {"description", cleaned},
                                                         {"color", embed_cfg.value("color", 0x3498db)}}});
-        }
-        else
-        {
+        } else {
             payload["content"] = cleaned;
         }
 

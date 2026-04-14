@@ -10,11 +10,9 @@
 #include <ctime>
 #include <string>
 
-namespace primebds::handlers::connections
-{
+namespace primebds::handlers::connections {
 
-    void handleLeaveEvent(PrimeBDS &plugin, endstone::PlayerQuitEvent &event)
-    {
+    void handleLeaveEvent(PrimeBDS &plugin, endstone::PlayerQuitEvent &event) {
         auto &player = event.getPlayer();
         auto &cfg = config::ConfigManager::instance();
         auto conf = cfg.config();
@@ -23,8 +21,7 @@ namespace primebds::handlers::connections
         // Leave message
         bool send_on_connect = modules.value("/join_leave_messages/send_on_connection"_json_pointer, true);
         std::string leave_msg = modules.value("/join_leave_messages/leave_message"_json_pointer, std::string("{player} has left"));
-        if (send_on_connect)
-        {
+        if (send_on_connect) {
             std::string formatted = leave_msg;
             auto pos = formatted.find("{player}");
             if (pos != std::string::npos)
@@ -42,12 +39,9 @@ namespace primebds::handlers::connections
 
         // Check if banned - suppress quit message
         auto mod_log = plugin.db->getModLog(xuid);
-        if (mod_log.has_value() && mod_log->is_banned)
-        {
+        if (mod_log.has_value() && mod_log->is_banned) {
             event.setQuitMessage("");
-        }
-        else
-        {
+        } else {
             // End session
             plugin.sldb->endSession(xuid);
 

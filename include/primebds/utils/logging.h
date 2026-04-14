@@ -6,8 +6,7 @@
 #include <endstone/endstone.hpp>
 #include <string>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
     void log(endstone::Server &server, const std::string &message,
              const std::string &type, const std::string &permission = "");

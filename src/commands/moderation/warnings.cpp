@@ -1,3 +1,6 @@
+/// @file warnings.cpp
+/// List or delete warnings for a player!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/moderation.h"
@@ -7,39 +10,42 @@
 #include <ctime>
 #include <cstdlib>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_warnings(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(warnings, "List or delete warnings for a player!", cmd_warnings,
+                     info.usages = {
+                         "/warnings <player: player> [page: int]",
+                         "/warnings <player: player> (delete|clear) [id: int]"};
+                     info.permissions = {"primebds.command.warnings"};);
+
+    /// List or delete warnings for a player!
     static bool cmd_warnings(PrimeBDS &plugin, endstone::CommandSender &sender,
-                             const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                             const std::vector<std::string> &args) {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /warnings <player> [page]");
             return false;
         }
 
         std::string target_name = args[0];
         auto user = plugin.db->getUserByName(target_name);
-        if (!user)
-        {
+        if (!user) {
             sender.sendMessage("\u00a7cPlayer not found");
             return false;
         }
 
         // Check for delete/clear actions first
-        if (args.size() >= 2)
-        {
+        if (args.size() >= 2) {
             std::string action = args[1];
-            if (action == "delete" && args.size() >= 3)
-            {
+            if (action == "delete" && args.size() >= 3) {
                 int id = std::atoi(args[2].c_str());
                 plugin.db->removeWarning(id);
                 sender.sendMessage("\u00a76Warning \u00a7eID " + std::to_string(id) + " \u00a76was erased");
                 return true;
             }
-            if (action == "clear")
-            {
+            if (action == "clear") {
                 auto warns = plugin.db->getWarnings(user->xuid);
                 for (auto &w : warns)
                     plugin.db->removeWarning(w.id);
@@ -50,8 +56,7 @@ namespace primebds::commands
 
         int page = (args.size() >= 2) ? std::max(1, std::atoi(args[1].c_str())) : 1;
         auto warnings = plugin.db->getWarnings(user->xuid);
-        if (warnings.empty())
-        {
+        if (warnings.empty()) {
             sender.sendMessage("\u00a76No warnings for \u00a7e" + target_name);
             return true;
         }
@@ -64,8 +69,7 @@ namespace primebds::commands
 
         sender.sendMessage("\u00a76Warnings for \u00a7e" + target_name +
                            " \u00a77(Page " + std::to_string(page) + "/" + std::to_string(total_pages) + "):");
-        for (int i = start; i < end; ++i)
-        {
+        for (int i = start; i < end; ++i) {
             auto &w = warnings[i];
             std::string expires = utils::formatTimeRemaining(w.warn_time);
             sender.sendMessage("\u00a78[\u00a77" + std::to_string(w.id) + "\u00a78] \u00a7f\"" +
@@ -75,9 +79,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(warnings, "List or delete warnings for a player!", cmd_warnings,
-                     info.usages = {
-                         "/warnings <player: player> [page: int]",
-                         "/warnings <player: player> (delete|clear) [id: int]"};
-                     info.permissions = {"primebds.command.warnings"};);
 } // namespace primebds::commands

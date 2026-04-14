@@ -1,13 +1,21 @@
+/// @file monitor.cpp
+/// Monitor server performance in real time!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
 #include <cstdio>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
-    static const char *get_tps_color(float tps)
-    {
+    static bool cmd_monitor(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(monitor, "Monitor server performance in real time!", cmd_monitor,
+                     info.usages = {"/monitor [enable: bool]"};
+                     info.permissions = {"primebds.command.monitor"};);
+
+    static const char *get_tps_color(float tps) {
         if (tps > 18.0f)
             return "\u00a7a"; // green
         if (tps >= 14.0f)
@@ -15,8 +23,7 @@ namespace primebds::commands
         return "\u00a7c";     // red
     }
 
-    static const char *get_ping_color(int ping)
-    {
+    static const char *get_ping_color(int ping) {
         if (ping <= 80)
             return "\u00a7a"; // green
         if (ping <= 160)
@@ -24,13 +31,11 @@ namespace primebds::commands
         return "\u00a7c";     // red
     }
 
-    static const char *get_mspt_color(float mspt)
-    {
+    static const char *get_mspt_color(float mspt) {
         return mspt < 50.0f ? "\u00a7a" : "\u00a7c";
     }
 
-    static const char *get_entity_color(int count)
-    {
+    static const char *get_entity_color(int count) {
         if (count < 600)
             return "\u00a7a"; // green
         if (count <= 800)
@@ -38,8 +43,7 @@ namespace primebds::commands
         return "\u00a7c";     // red
     }
 
-    static const char *get_dim_color(const std::string &dim_name)
-    {
+    static const char *get_dim_color(const std::string &dim_name) {
         if (dim_name == "Overworld")
             return "\u00a7a";
         if (dim_name == "Nether")
@@ -49,11 +53,9 @@ namespace primebds::commands
         return "\u00a78";
     }
 
-    static void monitor_tick(PrimeBDS &plugin, const std::string &player_name)
-    {
+    static void monitor_tick(PrimeBDS &plugin, const std::string &player_name) {
         auto *player = plugin.getServer().getPlayer(player_name);
-        if (!player)
-        {
+        if (!player) {
             plugin.monitor_intervals.erase(player_name);
             return;
         }
@@ -110,12 +112,11 @@ namespace primebds::commands
         player->sendTip(buf);
     }
 
+    /// Monitor server performance in real time!
     static bool cmd_monitor(PrimeBDS &plugin, endstone::CommandSender &sender,
-                            const std::vector<std::string> &args)
-    {
+                            const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
@@ -125,8 +126,7 @@ namespace primebds::commands
 
         // Resolve desired state: explicit arg overrides, otherwise toggle
         bool want_on;
-        if (!args.empty())
-        {
+        if (!args.empty()) {
             std::string arg = args[0];
             for (auto &c : arg)
                 c = static_cast<char>(std::tolower(c));
@@ -137,31 +137,24 @@ namespace primebds::commands
                 want_on = false;
             else
                 want_on = !is_active;
-        }
-        else
-        {
+        } else {
             want_on = !is_active;
         }
 
         // Disable
-        if (!want_on)
-        {
-            if (is_active)
-            {
+        if (!want_on) {
+            if (is_active) {
                 plugin.getServer().getScheduler().cancelTask(plugin.monitor_intervals[player_name]);
                 plugin.monitor_intervals.erase(player_name);
                 sender.sendMessage("\u00a7cMonitoring turned off");
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("\u00a7cMonitoring is not active");
             }
             return true;
         }
 
         // If already active, cancel first then restart
-        if (is_active)
-        {
+        if (is_active) {
             plugin.getServer().getScheduler().cancelTask(plugin.monitor_intervals[player_name]);
             plugin.monitor_intervals.erase(player_name);
         }
@@ -169,26 +162,19 @@ namespace primebds::commands
         // Schedule repeating task (every 20 ticks = 1 second)
         auto task = plugin.getServer().getScheduler().runTaskTimer(
             plugin,
-            [&plugin, player_name]()
-            {
+            [&plugin, player_name]() {
                 monitor_tick(plugin, player_name);
             },
             0, 5);
 
-        if (task)
-        {
+        if (task) {
             plugin.monitor_intervals[player_name] = task->getTaskId();
             sender.sendMessage("\u00a7aMonitoring turned on (server mode)");
-        }
-        else
-        {
+        } else {
             sender.sendMessage("\u00a7cFailed to start monitoring task.");
         }
 
         return true;
     }
 
-    REGISTER_COMMAND(monitor, "Monitor server performance in real time!", cmd_monitor,
-                     info.usages = {"/monitor [enable: bool]"};
-                     info.permissions = {"primebds.command.monitor"};);
 } // namespace primebds::commands

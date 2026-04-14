@@ -10,11 +10,9 @@
 #include <string>
 #include <vector>
 
-namespace primebds::db
-{
+namespace primebds::db {
 
-    class SessionDB : public DatabaseManager
-    {
+    class SessionDB : public DatabaseManager {
     public:
         explicit SessionDB(const std::string &db_name);
 

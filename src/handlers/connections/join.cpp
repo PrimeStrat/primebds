@@ -10,11 +10,9 @@
 #include <ctime>
 #include <string>
 
-namespace primebds::handlers::connections
-{
+namespace primebds::handlers::connections {
 
-    void handleJoinEvent(PrimeBDS &plugin, endstone::PlayerJoinEvent &event)
-    {
+    void handleJoinEvent(PrimeBDS &plugin, endstone::PlayerJoinEvent &event) {
         auto &player = event.getPlayer();
         auto &cfg = config::ConfigManager::instance();
         auto conf = cfg.config();
@@ -23,8 +21,7 @@ namespace primebds::handlers::connections
         // Join/leave messages
         bool send_on_connect = modules.value("/join_leave_messages/send_on_connection"_json_pointer, true);
         std::string join_msg = modules.value("/join_leave_messages/join_message"_json_pointer, std::string("{player} has joined"));
-        if (send_on_connect)
-        {
+        if (send_on_connect) {
             std::string formatted = join_msg;
             auto pos = formatted.find("{player}");
             if (pos != std::string::npos)
@@ -35,8 +32,7 @@ namespace primebds::handlers::connections
         // MOTD
         bool motd_on_connect = modules.value("/message_of_the_day/send_message_of_the_day_on_connect"_json_pointer, false);
         std::string motd = modules.value("/message_of_the_day/message_of_the_day_command"_json_pointer, std::string(""));
-        if (motd_on_connect && !motd.empty())
-        {
+        if (motd_on_connect && !motd.empty()) {
             player.sendMessage(motd);
         }
 
@@ -53,11 +49,9 @@ namespace primebds::handlers::connections
         // Alt detection
         auto alts = plugin.db->findAlts(player.getAddress().getHostname(),
                                         player.getDeviceId(), xuid);
-        if (!alts.empty())
-        {
+        if (!alts.empty()) {
             std::string alt_names;
-            for (size_t i = 0; i < alts.size(); ++i)
-            {
+            for (size_t i = 0; i < alts.size(); ++i) {
                 if (i > 0)
                     alt_names += ", ";
                 alt_names += alts[i].alt_name;
@@ -78,16 +72,14 @@ namespace primebds::handlers::connections
 
         // Ban check - suppress join message if banned
         auto mod_log = plugin.db->getModLog(xuid);
-        if (mod_log.has_value() && mod_log->is_banned)
-        {
+        if (mod_log.has_value() && mod_log->is_banned) {
             event.setJoinMessage("");
             return;
         }
 
         // Warning reminder
         auto warnings = plugin.db->getWarnings(xuid);
-        if (!warnings.empty())
-        {
+        if (!warnings.empty()) {
             auto &latest = warnings.front();
             player.sendMessage("\u00a76Reminder: You were recently warned for \u00a7e" +
                                latest.warn_reason);
@@ -95,11 +87,9 @@ namespace primebds::handlers::connections
 
         // Rank nametags
         bool rank_nametags = modules.value("/server_messages/rank_meta_nametags"_json_pointer, false);
-        if (rank_nametags)
-        {
+        if (rank_nametags) {
             auto user = plugin.db->getOnlineUser(xuid);
-            if (user.has_value())
-            {
+            if (user.has_value()) {
                 auto &pm = permissions::PermissionManager::instance();
                 std::string prefix = pm.getPrefix(user->internal_rank);
                 std::string suffix = pm.getSuffix(user->internal_rank);

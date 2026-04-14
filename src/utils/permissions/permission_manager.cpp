@@ -9,8 +9,7 @@
 #include <iostream>
 #include <set>
 
-namespace primebds::permissions
-{
+namespace primebds::permissions {
 
     static const std::vector<std::string> MINECRAFT_PERMISSIONS = {
         "minecraft", "minecraft.command", "minecraft.command.aimassist",
@@ -63,21 +62,18 @@ namespace primebds::permissions
         "primebds.command.repair.other", "primebds.command.god.other",
         "primebds.command.hat.other"};
 
-    PermissionManager &PermissionManager::instance()
-    {
+    PermissionManager &PermissionManager::instance() {
         static PermissionManager inst;
         return inst;
     }
 
-    static std::string toLower(const std::string &s)
-    {
+    static std::string toLower(const std::string &s) {
         std::string out = s;
         std::transform(out.begin(), out.end(), out.begin(), ::tolower);
         return out;
     }
 
-    void PermissionManager::loadPermissions(endstone::Server &server)
-    {
+    void PermissionManager::loadPermissions(endstone::Server &server) {
         std::lock_guard lock(mutex_);
 
         PERMISSIONS = config::ConfigManager::instance().loadPermissions();
@@ -92,28 +88,24 @@ namespace primebds::permissions
         std::set<std::string> all_perms;
 
         // Scan server-registered permissions
-        for (auto *perm : server.getPluginManager().getPermissions())
-        {
+        for (auto *perm : server.getPluginManager().getPermissions()) {
             auto name = toLower(perm->getName());
             auto prefix = name.substr(0, name.find('.'));
 
             if ((prefix == "minecraft" && mc_enabled) ||
                 (prefix == "primebds" && pb_enabled) ||
                 (prefix == "endstone" && es_enabled) ||
-                (prefix != "minecraft" && prefix != "primebds" && prefix != "endstone" && wc_enabled))
-            {
+                (prefix != "minecraft" && prefix != "primebds" && prefix != "endstone" && wc_enabled)) {
                 all_perms.insert(name);
             }
         }
 
-        if (mc_enabled)
-        {
+        if (mc_enabled) {
             for (auto &p : MINECRAFT_PERMISSIONS)
                 all_perms.insert(toLower(p));
         }
 
-        if (pb_enabled)
-        {
+        if (pb_enabled) {
             for (auto &p : EXTRA_PERMS)
                 all_perms.insert(toLower(p));
         }
@@ -126,8 +118,7 @@ namespace primebds::permissions
         std::cout << "[PrimeBDS] Total managed permissions: " << MANAGED_PERMISSIONS_LIST.size() << "\n";
     }
 
-    std::map<std::string, bool> PermissionManager::getRankPermissions(const std::string &rank)
-    {
+    std::map<std::string, bool> PermissionManager::getRankPermissions(const std::string &rank) {
         std::lock_guard lock(mutex_);
 
         // Reload permissions from file
@@ -136,10 +127,8 @@ namespace primebds::permissions
         // Normalize rank name
         std::string base_rank = "Default";
         auto rank_lower = toLower(rank);
-        for (auto &[key, val] : PERMISSIONS.items())
-        {
-            if (toLower(key) == rank_lower)
-            {
+        for (auto &[key, val] : PERMISSIONS.items()) {
+            if (toLower(key) == rank_lower) {
                 base_rank = key;
                 break;
             }
@@ -153,15 +142,12 @@ namespace primebds::permissions
         std::set<std::string> seen;
 
         std::function<void(const std::string &)> gather;
-        gather = [&](const std::string &r)
-        {
+        gather = [&](const std::string &r) {
             // Find actual key
             std::string actual_key;
             auto r_lower = toLower(r);
-            for (auto &[key, val] : PERMISSIONS.items())
-            {
-                if (toLower(key) == r_lower)
-                {
+            for (auto &[key, val] : PERMISSIONS.items()) {
+                if (toLower(key) == r_lower) {
                     actual_key = key;
                     break;
                 }
@@ -175,30 +161,23 @@ namespace primebds::permissions
                 return;
 
             // Process inheritance first
-            if (group.contains("inherits") && group["inherits"].is_array())
-            {
-                for (auto &parent : group["inherits"])
-                {
+            if (group.contains("inherits") && group["inherits"].is_array()) {
+                for (auto &parent : group["inherits"]) {
                     if (parent.is_string())
                         gather(parent.get<std::string>());
                 }
             }
 
             // Process permissions
-            if (group.contains("permissions"))
-            {
+            if (group.contains("permissions")) {
                 auto &perms = group["permissions"];
                 std::map<std::string, bool> fixed;
 
-                if (perms.is_object())
-                {
+                if (perms.is_object()) {
                     for (auto &[k, v] : perms.items())
                         fixed[toLower(k)] = v.get<bool>();
-                }
-                else if (perms.is_array())
-                {
-                    for (auto &p : perms)
-                    {
+                } else if (perms.is_array()) {
+                    for (auto &p : perms) {
                         if (p.is_string())
                             fixed[toLower(p.get<std::string>())] = true;
                     }
@@ -206,18 +185,15 @@ namespace primebds::permissions
 
                 // Wildcard
                 auto wc = fixed.find("*");
-                if (wc != fixed.end())
-                {
+                if (wc != fixed.end()) {
                     bool wildcard_val = wc->second;
-                    for (auto &[p, _] : result)
-                    {
+                    for (auto &[p, _] : result) {
                         if (fixed.find(p) == fixed.end())
                             result[p] = wildcard_val;
                     }
                 }
 
-                for (auto &[perm_name, allowed] : fixed)
-                {
+                for (auto &[perm_name, allowed] : fixed) {
                     if (perm_name == "*")
                         continue;
                     result[perm_name] = allowed;
@@ -230,8 +206,7 @@ namespace primebds::permissions
     }
 
     bool PermissionManager::checkPermission(endstone::Player &player, const std::string &perm,
-                                            const std::string &rank)
-    {
+                                            const std::string &rank) {
         // If we're not doing a rank-only check, use the player's actual permissions
         // which include attachments set by reloadCustomPerms
         if (player.isPermissionSet(perm))
@@ -239,12 +214,10 @@ namespace primebds::permissions
 
         auto xuid = player.getXuid();
 
-        // Check cache first
-        {
+        // Check cache first {
             std::lock_guard lock(mutex_);
             auto it = perm_cache_.find(xuid);
-            if (it != perm_cache_.end())
-            {
+            if (it != perm_cache_.end()) {
                 auto pit = it->second.find(toLower(perm));
                 if (pit != it->second.end())
                     return pit->second;
@@ -263,9 +236,7 @@ namespace primebds::permissions
         return it != rank_perms.end() && it->second;
     }
 
-    std::string PermissionManager::getPrefix(const std::string &rank)
-    {
-        {
+    std::string PermissionManager::getPrefix(const std::string &rank) { {
             std::lock_guard lock(mutex_);
             auto it = prefix_cache_.find(rank);
             if (it != prefix_cache_.end())
@@ -281,9 +252,7 @@ namespace primebds::permissions
         return prefix;
     }
 
-    std::string PermissionManager::getSuffix(const std::string &rank)
-    {
-        {
+    std::string PermissionManager::getSuffix(const std::string &rank) { {
             std::lock_guard lock(mutex_);
             auto it = suffix_cache_.find(rank);
             if (it != suffix_cache_.end())
@@ -300,13 +269,10 @@ namespace primebds::permissions
     }
 
     std::string PermissionManager::checkRankExists(endstone::Plugin &plugin, endstone::Player &player,
-                                                   const std::string &rank)
-    {
+                                                   const std::string &rank) {
         auto rank_lower = toLower(rank);
-        for (auto &[key, val] : PERMISSIONS.items())
-        {
-            if (toLower(key) == rank_lower)
-            {
+        for (auto &[key, val] : PERMISSIONS.items()) {
+            if (toLower(key) == rank_lower) {
                 auto &group = val;
                 if (group.is_object() && group.contains("permissions"))
                     return key;
@@ -325,21 +291,18 @@ namespace primebds::permissions
         return "Default";
     }
 
-    void PermissionManager::clearPrefixSuffixCache()
-    {
+    void PermissionManager::clearPrefixSuffixCache() {
         std::lock_guard lock(mutex_);
         prefix_cache_.clear();
         suffix_cache_.clear();
     }
 
-    void PermissionManager::invalidatePermCache(const std::string &xuid)
-    {
+    void PermissionManager::invalidatePermCache(const std::string &xuid) {
         std::lock_guard lock(mutex_);
         perm_cache_.erase(xuid);
     }
 
-    std::string PermissionManager::getPermissionHeader(endstone::Plugin &plugin)
-    {
+    std::string PermissionManager::getPermissionHeader(endstone::Plugin &plugin) {
         const auto &desc = plugin.getDescription();
 
         auto perms = desc.getPermissions();
@@ -351,16 +314,14 @@ namespace primebds::permissions
         return dot != std::string::npos ? name.substr(0, dot) : name;
     }
 
-    std::vector<std::string> PermissionManager::getRanks() const
-    {
+    std::vector<std::string> PermissionManager::getRanks() const {
         std::vector<std::string> ranks;
         for (auto &[key, val] : PERMISSIONS.items())
             ranks.push_back(key);
         return ranks;
     }
 
-    bool PermissionManager::checkInternalRank(const std::string &rank1, const std::string &rank2) const
-    {
+    bool PermissionManager::checkInternalRank(const std::string &rank1, const std::string &rank2) const {
         auto ranks = getRanks();
         int idx1 = -1, idx2 = -1;
         auto r1_lower = rank1;
@@ -368,8 +329,7 @@ namespace primebds::permissions
         std::transform(r1_lower.begin(), r1_lower.end(), r1_lower.begin(), ::tolower);
         std::transform(r2_lower.begin(), r2_lower.end(), r2_lower.begin(), ::tolower);
 
-        for (int i = 0; i < static_cast<int>(ranks.size()); ++i)
-        {
+        for (int i = 0; i < static_cast<int>(ranks.size()); ++i) {
             auto k = ranks[i];
             std::transform(k.begin(), k.end(), k.begin(), ::tolower);
             if (k == r1_lower)

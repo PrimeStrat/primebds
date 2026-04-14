@@ -1,16 +1,24 @@
+/// @file afk.cpp
+/// Toggles AFK mode for yourself!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/config/config_manager.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_afk(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(afk, "Toggles AFK mode for yourself!", cmd_afk,
+                     info.usages = {"/afk"};
+                     info.permissions = {"primebds.command.afk"};);
+
+    /// Toggles AFK mode for yourself!
     static bool cmd_afk(PrimeBDS &plugin, endstone::CommandSender &sender,
-                        const std::vector<std::string> &args)
-    {
+                        const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
@@ -21,15 +29,12 @@ namespace primebds::commands
         auto &cfg = config::ConfigManager::instance();
         bool broadcast = cfg.config()["modules"]["afk"].value("broadcast_afk_status", false);
 
-        if (!is_afk)
-        {
+        if (!is_afk) {
             plugin.db->updateUser(player->getXuid(), "is_afk", "1");
             player->sendMessage("\u00a77You are now AFK");
             if (broadcast)
                 plugin.getServer().broadcastMessage("\u00a7e" + player->getName() + " is now AFK");
-        }
-        else
-        {
+        } else {
             plugin.db->updateUser(player->getXuid(), "is_afk", "0");
             player->sendMessage("\u00a77You are no longer AFK");
             if (broadcast)
@@ -38,7 +43,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(afk, "Toggles AFK mode for yourself!", cmd_afk,
-                     info.usages = {"/afk"};
-                     info.permissions = {"primebds.command.afk"};);
 } // namespace primebds::commands

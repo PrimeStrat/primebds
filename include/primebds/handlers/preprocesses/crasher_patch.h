@@ -6,13 +6,11 @@
 #include <endstone/endstone.hpp>
 #include <string>
 
-namespace primebds
-{
+namespace primebds {
     class PrimeBDS;
 }
 
-namespace primebds::handlers::preprocesses
-{
+namespace primebds::handlers::preprocesses {
 
     bool checkCrasherExploit(PrimeBDS &plugin, endstone::Player &player, const std::string &command);
 

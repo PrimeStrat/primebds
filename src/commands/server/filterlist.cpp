@@ -1,3 +1,6 @@
+/// @file filterlist.cpp
+/// Lists all players with a filter!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
@@ -7,14 +10,20 @@
 #include <nlohmann/json.hpp>
 #include <set>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_filterlist(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(filterlist, "Lists all players with a filter!", cmd_filterlist,
+                     info.usages = {"/filterlist (ops|default|online|offline|muted|banned|ipbanned)<plist_filter: plist_filter> [page: int]"};
+                     info.permissions = {"primebds.command.filterlist"};
+                     info.aliases = {"flist"};);
+
+    /// Lists all players with a filter!
     static bool cmd_filterlist(PrimeBDS &plugin, endstone::CommandSender &sender,
-                               const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                               const std::vector<std::string> &args) {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /filterlist <ops|default|online|offline|muted|banned|ipbanned> [page]");
             return false;
         }
@@ -29,91 +38,70 @@ namespace primebds::commands
 
         std::vector<std::string> results;
 
-        if (filter == "ops")
-        {
+        if (filter == "ops") {
             // Read permissions.json from server root for operator entries
             auto perms_path = plugin.getDataFolder().parent_path().parent_path() / "permissions.json";
-            if (!std::filesystem::exists(perms_path))
-            {
+            if (!std::filesystem::exists(perms_path)) {
                 sender.sendMessage("\u00a7cpermissions.json not found");
                 return true;
             }
 
-            try
-            {
+            try {
                 std::ifstream f(perms_path);
                 auto data = nlohmann::json::parse(f);
                 std::vector<std::string> op_xuids;
-                for (auto &entry : data)
-                {
+                for (auto &entry : data) {
                     if (entry.value("permission", "") == "operator")
                         op_xuids.push_back(entry.value("xuid", ""));
                 }
 
-                for (auto &xuid : op_xuids)
-                {
+                for (auto &xuid : op_xuids) {
                     auto user = plugin.db->getUserByXuid(xuid);
                     std::string name = user ? user->name : "\u00a78Unknown";
                     results.push_back("\u00a7e" + name + " \u00a78(" + xuid + ")");
                 }
 
-                std::sort(results.begin(), results.end(), [](const std::string &a, const std::string &b)
-                          {
+                std::sort(results.begin(), results.end(), [](const std::string &a, const std::string &b) {
                 bool a_unknown = a.find("Unknown") != std::string::npos;
                 bool b_unknown = b.find("Unknown") != std::string::npos;
                 if (a_unknown != b_unknown)
                     return !a_unknown;
                 return a < b; });
-            }
-            catch (const std::exception &e)
-            {
+            } catch (const std::exception &e) {
                 sender.sendMessage("\u00a7cFailed to read permissions.json: " + std::string(e.what()));
                 return true;
             }
-        }
-        else if (filter == "default")
-        {
+        } else if (filter == "default") {
             // All users with internal_rank "default" from DB
             auto all_users = plugin.db->getAllUsers();
-            for (auto &u : all_users)
-            {
+            for (auto &u : all_users) {
                 std::string rank = u.internal_rank;
                 for (auto &c : rank)
                     c = static_cast<char>(std::tolower(c));
                 if (rank == "default")
                     results.push_back(u.name);
             }
-        }
-        else if (filter == "online")
-        {
+        } else if (filter == "online") {
             for (auto *p : plugin.getServer().getOnlinePlayers())
                 results.push_back(p->getName());
-        }
-        else if (filter == "offline")
-        {
+        } else if (filter == "offline") {
             std::set<std::string> online_names;
             for (auto *p : plugin.getServer().getOnlinePlayers())
                 online_names.insert(p->getName());
 
             auto all_users = plugin.db->getAllUsers();
-            for (auto &u : all_users)
-            {
+            for (auto &u : all_users) {
                 if (online_names.find(u.name) == online_names.end())
                     results.push_back(u.name);
             }
-        }
-        else if (filter == "muted")
-        {
+        } else if (filter == "muted") {
             // Validate each mute is still active via checkAndUpdateMute
             auto muted = plugin.db->getMutedUsers();
-            for (auto &m : muted)
-            {
+            for (auto &m : muted) {
                 if (plugin.db->checkAndUpdateMute(m.xuid, m.name))
                     results.push_back(m.name);
             }
-        }
-        else if (filter == "banned")
-        {
+        } else if (filter == "banned") {
             // User bans from mod log
             auto banned = plugin.db->getBannedUsers();
             for (auto &u : banned)
@@ -123,29 +111,23 @@ namespace primebds::commands
             auto name_bans = plugin.serverdb->getAllNameBans();
             for (auto &nb : name_bans)
                 results.push_back(nb.name + " \u00a77(Name Banned)");
-        }
-        else if (filter == "ipbanned")
-        {
+        } else if (filter == "ipbanned") {
             auto ipbanned = plugin.db->getIPBannedUsers();
             for (auto &u : ipbanned)
                 results.push_back(u.name);
-        }
-        else
-        {
+        } else {
             sender.sendMessage("\u00a7cInvalid filter. Valid: ops, default, online, offline, muted, banned, ipbanned");
             return false;
         }
 
-        if (results.empty())
-        {
+        if (results.empty()) {
             sender.sendMessage("\u00a77No " + filter + " players found");
             return true;
         }
 
         int total = static_cast<int>(results.size());
         int total_pages = (total + per_page - 1) / per_page;
-        if (page > total_pages)
-        {
+        if (page > total_pages) {
             sender.sendMessage("\u00a7cInvalid page number. Available pages: 1-" + std::to_string(total_pages));
             return false;
         }
@@ -162,9 +144,5 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(filterlist, "Lists all players with a filter!", cmd_filterlist,
-                     info.usages = {"/filterlist (ops|default|online|offline|muted|banned|ipbanned)<plist_filter: plist_filter> [page: int]"};
-                     info.permissions = {"primebds.command.filterlist"};
-                     info.aliases = {"flist"};);
 
 } // namespace primebds::commands

@@ -8,11 +8,9 @@
 #include <string>
 #include <optional>
 
-namespace primebds::config
-{
+namespace primebds::config {
 
-    class ConfigManager
-    {
+    class ConfigManager {
     public:
         static ConfigManager &instance();
 

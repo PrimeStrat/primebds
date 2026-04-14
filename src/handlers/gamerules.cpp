@@ -6,32 +6,27 @@
 #include "primebds/utils/config/config_manager.h"
 #include "primebds/utils/permissions/permission_manager.h"
 
-namespace primebds::handlers
-{
+namespace primebds::handlers {
 
-    void handleBedEnterEvent(PrimeBDS &plugin, endstone::PlayerBedEnterEvent &event)
-    {
+    void handleBedEnterEvent(PrimeBDS &plugin, endstone::PlayerBedEnterEvent &event) {
         auto it = plugin.gamerules.find("can_sleep");
         if (it != plugin.gamerules.end() && !it->second)
             event.setCancelled(true);
     }
 
-    void handleEmoteEvent(PrimeBDS &plugin, endstone::PlayerEmoteEvent &event)
-    {
+    void handleEmoteEvent(PrimeBDS &plugin, endstone::PlayerEmoteEvent &event) {
         auto it = plugin.gamerules.find("can_emote");
         if (it != plugin.gamerules.end() && !it->second)
             event.setCancelled(true);
     }
 
-    void handleLeavesDecayEvent(PrimeBDS &plugin, endstone::LeavesDecayEvent &event)
-    {
+    void handleLeavesDecayEvent(PrimeBDS &plugin, endstone::LeavesDecayEvent &event) {
         auto it = plugin.gamerules.find("can_decay_leaves");
         if (it != plugin.gamerules.end() && !it->second)
             event.setCancelled(true);
     }
 
-    void handleSkinChangeEvent(PrimeBDS &plugin, endstone::PlayerSkinChangeEvent &event)
-    {
+    void handleSkinChangeEvent(PrimeBDS &plugin, endstone::PlayerSkinChangeEvent &event) {
         auto cfg = config::ConfigManager::instance().getModule("better_chat");
         if (!cfg.value("skin_change_messages", true))
             event.setSkinChangeMessage("");
@@ -41,14 +36,12 @@ namespace primebds::handlers
             event.setCancelled(true);
     }
 
-    void handleServerLoadEvent(PrimeBDS &plugin, endstone::ServerLoadEvent &event)
-    {
+    void handleServerLoadEvent(PrimeBDS &plugin, endstone::ServerLoadEvent &event) {
         // Load permissions on server start/reload
         permissions::PermissionManager::instance().loadPermissions(plugin.getServer());
 
         // Reload custom permissions for all online players
-        for (auto *player : plugin.getServer().getOnlinePlayers())
-        {
+        for (auto *player : plugin.getServer().getOnlinePlayers()) {
             plugin.reloadCustomPerms(*player);
         }
     }

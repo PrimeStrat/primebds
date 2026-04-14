@@ -6,8 +6,7 @@
 #include <endstone/endstone.hpp>
 #include <optional>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
     endstone::Plugin *getEconomyLink(endstone::Server &server);
 

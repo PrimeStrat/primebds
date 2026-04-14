@@ -9,17 +9,14 @@
 #include <variant>
 #include <vector>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
-    struct FormButton
-    {
+    struct FormButton {
         std::string text;
         std::string icon;
     };
 
-    class ActionFormBuilder
-    {
+    class ActionFormBuilder {
     public:
         ActionFormBuilder &title(const std::string &title);
         ActionFormBuilder &body(const std::string &body);
@@ -33,8 +30,7 @@ namespace primebds::utils
         std::vector<FormButton> buttons_;
     };
 
-    class ModalFormBuilder
-    {
+    class ModalFormBuilder {
     public:
         ModalFormBuilder &title(const std::string &title);
         ModalFormBuilder &dropdown(const std::string &label, const std::vector<std::string> &options,
@@ -49,8 +45,7 @@ namespace primebds::utils
 
     private:
         std::string title_;
-        struct FormElement
-        {
+        struct FormElement {
             std::string type;
             std::string label;
             std::vector<std::string> options;
@@ -62,8 +57,7 @@ namespace primebds::utils
         std::vector<FormElement> elements_;
     };
 
-    class MessageFormBuilder
-    {
+    class MessageFormBuilder {
     public:
         MessageFormBuilder &title(const std::string &title);
         MessageFormBuilder &body(const std::string &body);

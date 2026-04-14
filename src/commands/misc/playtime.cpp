@@ -1,31 +1,35 @@
+/// @file playtime.cpp
+/// Check total playtime!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_playtime(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(playtime, "Check total playtime!", cmd_playtime,
+                     info.usages = {"/playtime [player: player]"};
+                     info.permissions = {"primebds.command.playtime"};);
+
+    /// Check total playtime!
     static bool cmd_playtime(PrimeBDS &plugin, endstone::CommandSender &sender,
-                             const std::vector<std::string> &args)
-    {
+                             const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("This command can only be executed by a player");
             return false;
         }
 
         std::string xuid;
         std::string name;
-        if (args.empty())
-        {
+        if (args.empty()) {
             xuid = player->getXuid();
             name = player->getName();
-        }
-        else
-        {
+        } else {
             auto user = plugin.db->getUserByName(args[0]);
-            if (!user.has_value())
-            {
+            if (!user.has_value()) {
                 sender.sendMessage("\u00a7cPlayer not found");
                 return false;
             }
@@ -41,7 +45,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(playtime, "Check total playtime!", cmd_playtime,
-                     info.usages = {"/playtime [player: player]"};
-                     info.permissions = {"primebds.command.playtime"};);
 } // namespace primebds::commands

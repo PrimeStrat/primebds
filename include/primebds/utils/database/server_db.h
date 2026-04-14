@@ -12,11 +12,9 @@
 #include <string>
 #include <vector>
 
-namespace primebds::db
-{
+namespace primebds::db {
 
-    class ServerDB : public DatabaseManager
-    {
+    class ServerDB : public DatabaseManager {
     public:
         explicit ServerDB(const std::string &db_name);
 

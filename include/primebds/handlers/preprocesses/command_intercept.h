@@ -5,13 +5,11 @@
 
 #include <endstone/endstone.hpp>
 
-namespace primebds
-{
+namespace primebds {
     class PrimeBDS;
 }
 
-namespace primebds::handlers::preprocesses
-{
+namespace primebds::handlers::preprocesses {
 
     void handleCommandPreprocess(PrimeBDS &plugin, endstone::PlayerCommandEvent &event);
     void handleServerCommandPreprocess(PrimeBDS &plugin, endstone::ServerCommandEvent &event);

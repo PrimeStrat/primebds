@@ -1,33 +1,44 @@
+/// @file warps.cpp
+/// Manage server warps!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
 #include <cstdlib>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_warps(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(warps, "Manage server warps!", cmd_warps,
+                     info.usages = {
+                         "/warps",
+                         "/warps (list)",
+                         "/warps (create) <name: string> [displayname: string] [category: string] [description: string]",
+                         "/warps (delete) <name: message>",
+                         "/warps (addalias) <name: string> <alias: message>",
+                         "/warps (removealias) <name: string> <alias: message>"};
+                     info.permissions = {"primebds.command.warps"};);
+
+    /// Manage server warps!
     static bool cmd_warps(PrimeBDS &plugin, endstone::CommandSender &sender,
-                          const std::vector<std::string> &args)
-    {
+                          const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
 
-        if (args.empty())
-        {
+        if (args.empty()) {
             // Open warps management â€” list all warps
             auto warps = plugin.serverdb->getAllWarps();
-            if (warps.empty())
-            {
+            if (warps.empty()) {
                 sender.sendMessage("\u00a7cNo warps exist");
                 return true;
             }
             sender.sendMessage("\u00a7aWarps:");
-            for (auto &w : warps)
-            {
+            for (auto &w : warps) {
                 std::string display = w.displayname.empty() ? w.name : w.displayname;
                 sender.sendMessage("\u00a77- \u00a7e" + display);
             }
@@ -38,17 +49,14 @@ namespace primebds::commands
         for (auto &c : sub)
             c = (char)std::tolower(c);
 
-        if (sub == "list")
-        {
+        if (sub == "list") {
             auto warps = plugin.serverdb->getAllWarps();
-            if (warps.empty())
-            {
+            if (warps.empty()) {
                 sender.sendMessage("\u00a7cThere are no warps set");
                 return true;
             }
             sender.sendMessage("\u00a7aWarps:");
-            for (auto &w : warps)
-            {
+            for (auto &w : warps) {
                 std::string display = w.displayname.empty() ? w.name : w.displayname;
                 std::string line = "\u00a7b" + display;
                 if (!w.description.empty())
@@ -58,8 +66,7 @@ namespace primebds::commands
             return true;
         }
 
-        if (sub == "create" && args.size() >= 2)
-        {
+        if (sub == "create" && args.size() >= 2) {
             std::string name = args[1];
             std::string displayname = (args.size() >= 3) ? args[2] : "";
             std::string category = (args.size() >= 4) ? args[3] : "";
@@ -73,125 +80,93 @@ namespace primebds::commands
                 loc.getX(), loc.getY(), loc.getZ(),
                 player->getDimension().getName(), loc.getPitch(), loc.getYaw());
 
-            if (plugin.serverdb->createWarp(name, pos_json, displayname, category, description, cost, cooldown, delay))
-            {
+            if (plugin.serverdb->createWarp(name, pos_json, displayname, category, description, cost, cooldown, delay)) {
                 sender.sendMessage("\u00a7aWarp \u00a7e" + name + " \u00a7aset at your current location");
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("\u00a7cWarp \u00a7e" + name + " \u00a7calready exists");
             }
             return true;
         }
 
-        if (sub == "delete" && args.size() >= 2)
-        {
+        if (sub == "delete" && args.size() >= 2) {
             std::string name = args[1];
-            if (plugin.serverdb->deleteWarp(name))
-            {
+            if (plugin.serverdb->deleteWarp(name)) {
                 sender.sendMessage("\u00a7aWarp \u00a7e" + name + " \u00a7adeleted");
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("\u00a7cWarp \u00a7e" + name + " \u00a7cdoes not exist");
             }
             return true;
         }
 
-        if (sub.substr(0, 3) == "set" && args.size() >= 3)
-        {
+        if (sub.substr(0, 3) == "set" && args.size() >= 3) {
             std::string name = args[1];
             auto warp = plugin.serverdb->getWarp(name);
-            if (!warp)
-            {
+            if (!warp) {
                 sender.sendMessage("\u00a7cWarp \u00a7e" + name + " \u00a7cdoes not exist");
                 return true;
             }
 
-            if (sub == "setcost")
-            {
+            if (sub == "setcost") {
                 plugin.serverdb->updateWarpProperty(name, "cost", args[2]);
                 sender.sendMessage("\u00a7aWarp \u00a7e" + name + " \u00a7acost updated");
-            }
-            else if (sub == "setdescription")
-            {
+            } else if (sub == "setdescription") {
                 std::string val;
-                for (size_t i = 2; i < args.size(); ++i)
-                {
+                for (size_t i = 2; i < args.size(); ++i) {
                     if (i > 2)
                         val += " ";
                     val += args[i];
                 }
                 plugin.serverdb->updateWarpProperty(name, "description", val);
                 sender.sendMessage("\u00a7aWarp \u00a7e" + name + " \u00a7adescription updated");
-            }
-            else if (sub == "setcategory")
-            {
+            } else if (sub == "setcategory") {
                 plugin.serverdb->updateWarpProperty(name, "category", args[2]);
                 sender.sendMessage("\u00a7aWarp \u00a7e" + name + " \u00a7acategory updated");
-            }
-            else if (sub == "setdisplayname")
-            {
+            } else if (sub == "setdisplayname") {
                 std::string val;
-                for (size_t i = 2; i < args.size(); ++i)
-                {
+                for (size_t i = 2; i < args.size(); ++i) {
                     if (i > 2)
                         val += " ";
                     val += args[i];
                 }
                 plugin.serverdb->updateWarpProperty(name, "displayname", val);
                 sender.sendMessage("\u00a7aWarp \u00a7e" + name + " \u00a7adisplay name updated");
-            }
-            else if (sub == "setdelay")
-            {
+            } else if (sub == "setdelay") {
                 plugin.serverdb->updateWarpProperty(name, "delay", args[2]);
                 sender.sendMessage("\u00a7aWarp \u00a7e" + name + " \u00a7adelay updated");
-            }
-            else if (sub == "setcooldown")
-            {
+            } else if (sub == "setcooldown") {
                 plugin.serverdb->updateWarpProperty(name, "cooldown", args[2]);
                 sender.sendMessage("\u00a7aWarp \u00a7e" + name + " \u00a7acooldown updated");
             }
             return true;
         }
 
-        if (sub == "addalias" && args.size() >= 3)
-        {
+        if (sub == "addalias" && args.size() >= 3) {
             std::string warp_name = args[1];
             std::string alias;
-            for (size_t i = 2; i < args.size(); ++i)
-            {
+            for (size_t i = 2; i < args.size(); ++i) {
                 if (i > 2)
                     alias += " ";
                 alias += args[i];
             }
-            if (plugin.serverdb->addAlias(warp_name, alias))
-            {
+            if (plugin.serverdb->addAlias(warp_name, alias)) {
                 sender.sendMessage("\u00a7aAlias \u00a7e" + alias + " \u00a7aadded to warp \u00a7e" + warp_name);
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("\u00a7cCould not add alias");
             }
             return true;
         }
 
-        if (sub == "removealias" && args.size() >= 3)
-        {
+        if (sub == "removealias" && args.size() >= 3) {
             std::string warp_name = args[1];
             std::string alias;
-            for (size_t i = 2; i < args.size(); ++i)
-            {
+            for (size_t i = 2; i < args.size(); ++i) {
                 if (i > 2)
                     alias += " ";
                 alias += args[i];
             }
-            if (plugin.serverdb->removeAlias(warp_name, alias))
-            {
+            if (plugin.serverdb->removeAlias(warp_name, alias)) {
                 sender.sendMessage("\u00a7aAlias \u00a7e" + alias + " \u00a7aremoved from warp \u00a7e" + warp_name);
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("\u00a7cCould not remove alias");
             }
             return true;
@@ -201,14 +176,5 @@ namespace primebds::commands
         return false;
     }
 
-    REGISTER_COMMAND(warps, "Manage server warps!", cmd_warps,
-                     info.usages = {
-                         "/warps",
-                         "/warps (list)",
-                         "/warps (create) <name: string> [displayname: string] [category: string] [description: string]",
-                         "/warps (delete) <name: message>",
-                         "/warps (addalias) <name: string> <alias: message>",
-                         "/warps (removealias) <name: string> <alias: message>"};
-                     info.permissions = {"primebds.command.warps"};);
 
 } // namespace primebds::commands

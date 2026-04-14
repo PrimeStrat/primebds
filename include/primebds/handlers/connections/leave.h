@@ -5,13 +5,11 @@
 
 #include <endstone/endstone.hpp>
 
-namespace primebds
-{
+namespace primebds {
     class PrimeBDS;
 }
 
-namespace primebds::handlers::connections
-{
+namespace primebds::handlers::connections {
 
     void handleLeaveEvent(PrimeBDS &plugin, endstone::PlayerQuitEvent &event);
 

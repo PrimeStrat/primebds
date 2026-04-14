@@ -35,13 +35,11 @@
 #include <string>
 #include <unordered_map>
 
-namespace primebds
-{
+namespace primebds {
 
     class EventListener;
 
-    class PrimeBDS : public endstone::Plugin
-    {
+    class PrimeBDS : public endstone::Plugin {
     public:
         void onLoad() override;
         void onEnable() override;
@@ -99,8 +97,7 @@ namespace primebds
     };
 
     /// Event listener that delegates to handler functions.
-    class EventListener
-    {
+    class EventListener {
     public:
         explicit EventListener(PrimeBDS &plugin) : plugin_(plugin) {}
 

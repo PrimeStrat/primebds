@@ -8,11 +8,9 @@
 #include <string>
 #include <vector>
 
-namespace primebds::db
-{
+namespace primebds::db {
 
-    struct ServerData
-    {
+    struct ServerData {
         int64_t last_shutdown_time = 0;
         std::string allowlist_profile;
         int can_interact = 1;
@@ -24,15 +22,13 @@ namespace primebds::db
         int can_split_screen = 1;
     };
 
-    struct NameBan
-    {
+    struct NameBan {
         std::string name;
         int64_t banned_time = 0;
         std::string ban_reason;
     };
 
-    struct User
-    {
+    struct User {
         std::string xuid;
         std::string uuid;
         std::string name;
@@ -59,8 +55,7 @@ namespace primebds::db
         int enabled_sc = 0;
     };
 
-    struct ModLog
-    {
+    struct ModLog {
         std::string xuid;
         std::string name;
         bool is_muted = false;
@@ -74,8 +69,7 @@ namespace primebds::db
         bool is_ip_muted = false;
     };
 
-    struct Warn
-    {
+    struct Warn {
         int id = 0;
         std::string xuid;
         std::string name;
@@ -84,8 +78,7 @@ namespace primebds::db
         std::string added_by;
     };
 
-    struct Note
-    {
+    struct Note {
         int id = 0;
         std::string xuid;
         std::string name;
@@ -94,8 +87,7 @@ namespace primebds::db
         std::string added_by;
     };
 
-    struct PunishmentLog
-    {
+    struct PunishmentLog {
         int id = 0;
         std::string xuid;
         std::string name;
@@ -105,8 +97,7 @@ namespace primebds::db
         std::optional<int64_t> duration;
     };
 
-    struct Warp
-    {
+    struct Warp {
         std::string name;
         std::string pos;
         std::string displayname;
@@ -118,8 +109,7 @@ namespace primebds::db
         std::vector<std::string> aliases;
     };
 
-    struct Home
-    {
+    struct Home {
         std::string xuid;
         std::string username;
         std::string name;
@@ -129,16 +119,14 @@ namespace primebds::db
         double delay = 0.0;
     };
 
-    struct Spawn
-    {
+    struct Spawn {
         std::string pos;
         double cost = 0.0;
         double cooldown = 0.0;
         double delay = 0.0;
     };
 
-    struct LastWarp
-    {
+    struct LastWarp {
         std::string xuid;
         std::string username;
         std::string name;
@@ -148,15 +136,13 @@ namespace primebds::db
         double delay = 0.0;
     };
 
-    struct HomeSettings
-    {
+    struct HomeSettings {
         double delay = 0.0;
         double cooldown = 0.0;
         double cost = 0.0;
     };
 
-    struct Alt
-    {
+    struct Alt {
         std::string main_name;
         std::string main_xuid;
         std::string alt_name;
@@ -164,8 +150,7 @@ namespace primebds::db
         int64_t expiry = 0;
     };
 
-    struct Rank
-    {
+    struct Rank {
         std::string name;
         int weight = 0;
         std::string prefix;
@@ -174,14 +159,12 @@ namespace primebds::db
         std::vector<std::string> permissions;
     };
 
-    struct AllowlistEntry
-    {
+    struct AllowlistEntry {
         std::string name;
         std::string profile;
     };
 
-    struct AllowlistProfile
-    {
+    struct AllowlistProfile {
         std::string name;
         bool active = false;
         std::string inherits;

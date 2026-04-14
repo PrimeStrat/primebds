@@ -1,37 +1,42 @@
+/// @file unmute.cpp
+/// Removes an active mute from a player!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/logging.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_unmute(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(unmute, "Removes an active mute from a player!", cmd_unmute,
+                     info.usages = {"/unmute <player: player>"};
+                     info.permissions = {"primebds.command.unmute"};);
+
+    /// Removes an active mute from a player!
     static bool cmd_unmute(PrimeBDS &plugin, endstone::CommandSender &sender,
-                           const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                           const std::vector<std::string> &args) {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /unmute <player>");
             return false;
         }
 
         for (auto &a : args)
-            if (a.find('@') != std::string::npos)
-            {
+            if (a.find('@') != std::string::npos) {
                 sender.sendMessage("\u00a7cTarget selectors are invalid for this command");
                 return false;
             }
 
         std::string target_name = args[0];
         auto user = plugin.db->getUserByName(target_name);
-        if (!user)
-        {
+        if (!user) {
             sender.sendMessage("\u00a7cPlayer not found");
             return false;
         }
 
         auto modlog = plugin.db->getModLog(user->xuid);
-        if (!modlog || !modlog->is_muted)
-        {
+        if (!modlog || !modlog->is_muted) {
             sender.sendMessage("\u00a76Player \u00a7e" + target_name + " \u00a76is not muted");
             return false;
         }
@@ -49,7 +54,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(unmute, "Removes an active mute from a player!", cmd_unmute,
-                     info.usages = {"/unmute <player: player>"};
-                     info.permissions = {"primebds.command.unmute"};);
 } // namespace primebds::commands

@@ -1,18 +1,26 @@
+/// @file blockinfo.cpp
+/// Prints info of the facing block!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
 #include <cmath>
 #include <string>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_blockinfo(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(blockinfo, "Prints info of the facing block!", cmd_blockinfo,
+                     info.usages = {"/blockinfo"};
+                     info.permissions = {"primebds.command.blockinfo"};);
+
+    /// Prints info of the facing block!
     static bool cmd_blockinfo(PrimeBDS &plugin, endstone::CommandSender &sender,
-                              const std::vector<std::string> &args)
-    {
+                              const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
@@ -26,14 +34,12 @@ namespace primebds::commands
         double dir_y = -std::sin(pitch);
         double dir_z = std::cos(yaw) * std::cos(pitch);
 
-        for (double d = 0.0; d <= 6.0; d += 0.2)
-        {
+        for (double d = 0.0; d <= 6.0; d += 0.2) {
             int bx = static_cast<int>(loc.getX() + dir_x * d);
             int by = static_cast<int>(loc.getY() + dir_y * d);
             int bz = static_cast<int>(loc.getZ() + dir_z * d);
             auto block = dim.getBlockAt(bx, by, bz);
-            if (block->getType() != "minecraft:air")
-            {
+            if (block->getType() != "minecraft:air") {
                 auto bl = block->getLocation();
                 std::string msg = "\u00a7bBlock Information:\n";
                 msg += "\u00a77- \u00a7eX: \u00a7f" + std::to_string(bl.getBlockX()) + "\n";
@@ -48,7 +54,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(blockinfo, "Prints info of the facing block!", cmd_blockinfo,
-                     info.usages = {"/blockinfo"};
-                     info.permissions = {"primebds.command.blockinfo"};);
 } // namespace primebds::commands

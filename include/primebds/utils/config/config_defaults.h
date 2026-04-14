@@ -5,8 +5,7 @@
 
 #include <nlohmann/json.hpp>
 
-namespace primebds::config
-{
+namespace primebds::config {
 
     nlohmann::json getDefaultModules();
     nlohmann::json getDefaultPermissions();

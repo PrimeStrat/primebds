@@ -1,16 +1,24 @@
+/// @file send.cpp
+/// Send players to another server!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/target_selector.h"
 #include "primebds/utils/address.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_send(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(send, "Send players to another server!", cmd_send,
+                     info.usages = {"/send <player: player> <ip:port: message>"};
+                     info.permissions = {"primebds.command.send"};);
+
+    /// Send players to another server!
     static bool cmd_send(PrimeBDS &plugin, endstone::CommandSender &sender,
-                         const std::vector<std::string> &args)
-    {
-        if (args.size() < 2)
-        {
+                         const std::vector<std::string> &args) {
+        if (args.size() < 2) {
             sender.sendMessage("\u00a7cUsage: /send <player: player> <ip:port>");
             return false;
         }
@@ -20,8 +28,7 @@ namespace primebds::commands
 
         // Parse ip:port from address
         auto colon = address.find(':');
-        if (colon == std::string::npos)
-        {
+        if (colon == std::string::npos) {
             sender.sendMessage("\u00a7cInvalid address format. Use ip:port");
             return false;
         }
@@ -29,17 +36,14 @@ namespace primebds::commands
         std::string ip = address.substr(0, colon);
         int port = std::atoi(address.substr(colon + 1).c_str());
 
-        if (ip.empty() || port <= 0)
-        {
+        if (ip.empty() || port <= 0) {
             sender.sendMessage("\u00a7cInvalid address format. Use ip:port");
             return false;
         }
 
         int count = 0;
-        for (auto *t : targets)
-        {
-            if (auto *p = dynamic_cast<endstone::Player *>(t))
-            {
+        for (auto *t : targets) {
+            if (auto *p = dynamic_cast<endstone::Player *>(t)) {
                 p->transfer(ip, port);
                 ++count;
             }
@@ -49,7 +53,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(send, "Send players to another server!", cmd_send,
-                     info.usages = {"/send <player: player> <ip:port: message>"};
-                     info.permissions = {"primebds.command.send"};);
 } // namespace primebds::commands

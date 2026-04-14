@@ -1,3 +1,6 @@
+/// @file mute.cpp
+/// Permanently mutes a player on the server!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 #include "primebds/utils/moderation.h"
@@ -5,32 +8,34 @@
 
 #include <ctime>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_mute(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(mute, "Permanently mutes a player on the server!", cmd_mute,
+                     info.usages = {"/mute <player: player> [reason: message]"};
+                     info.permissions = {"primebds.command.mute"};);
+
+    /// Permanently mutes a player on the server!
     static bool cmd_mute(PrimeBDS &plugin, endstone::CommandSender &sender,
-                         const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                         const std::vector<std::string> &args) {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /mute <player> [reason]");
             return false;
         }
 
         for (auto &a : args)
-            if (a.find('@') != std::string::npos)
-            {
+            if (a.find('@') != std::string::npos) {
                 sender.sendMessage("\u00a7cTarget selectors are invalid for this command");
                 return false;
             }
 
         std::string target_name = args[0];
         std::string reason = "Disruptive Behavior";
-        if (args.size() > 1)
-        {
+        if (args.size() > 1) {
             reason.clear();
-            for (size_t i = 1; i < args.size(); ++i)
-            {
+            for (size_t i = 1; i < args.size(); ++i) {
                 if (i > 1)
                     reason += " ";
                 reason += args[i];
@@ -38,15 +43,13 @@ namespace primebds::commands
         }
 
         auto user = plugin.db->getUserByName(target_name);
-        if (!user)
-        {
+        if (!user) {
             sender.sendMessage("\u00a7cPlayer not found");
             return false;
         }
 
         auto modlog = plugin.db->getModLog(user->xuid);
-        if (modlog && modlog->is_muted)
-        {
+        if (modlog && modlog->is_muted) {
             sender.sendMessage("\u00a76Player \u00a7e" + target_name + " \u00a76is already muted");
             return false;
         }
@@ -58,8 +61,7 @@ namespace primebds::commands
         plugin.db->updateModLog(user->xuid, "mute_reason", reason);
 
         auto *target = plugin.getServer().getPlayer(target_name);
-        if (target)
-        {
+        if (target) {
             target->sendMessage("\u00a76You have been permanently muted for \u00a7e\"" + reason + "\"");
         }
 
@@ -68,7 +70,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(mute, "Permanently mutes a player on the server!", cmd_mute,
-                     info.usages = {"/mute <player: player> [reason: message]"};
-                     info.permissions = {"primebds.command.mute"};);
 } // namespace primebds::commands

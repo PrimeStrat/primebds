@@ -7,8 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
     std::vector<endstone::Actor *> getMatchingActors(endstone::Server &server,
                                                      const std::string &selector,

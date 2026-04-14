@@ -1,42 +1,47 @@
+/// @file reply.cpp
+/// Reply to the last person who messaged you!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
+    static bool cmd_reply(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(reply, "Reply to the last person who messaged you!", cmd_reply,
+                     info.usages = {"/reply <message: message>"};
+                     info.permissions = {"primebds.command.reply"};
+                     info.aliases = {"r"};);
+
+    /// Reply to the last person who messaged you!
     static bool cmd_reply(PrimeBDS &plugin, endstone::CommandSender &sender,
-                          const std::vector<std::string> &args)
-    {
+                          const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
 
-        if (args.empty())
-        {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /reply <message>");
             return false;
         }
 
         auto user = plugin.db->getOnlineUser(player->getXuid());
-        if (!user || user->last_messaged.empty())
-        {
+        if (!user || user->last_messaged.empty()) {
             sender.sendMessage("\u00a7cYou have nobody to reply to");
             return true;
         }
 
         auto *target = plugin.getServer().getPlayer(user->last_messaged);
-        if (!target)
-        {
+        if (!target) {
             sender.sendMessage("\u00a7c" + user->last_messaged + " is no longer online");
             return true;
         }
 
         std::string msg;
-        for (size_t i = 0; i < args.size(); ++i)
-        {
+        for (size_t i = 0; i < args.size(); ++i) {
             if (i > 0)
                 msg += " ";
             msg += args[i];
@@ -49,13 +54,11 @@ namespace primebds::commands
         plugin.db->updateUser(target->getXuid(), "last_messaged", player->getName());
 
         // Social spy relay
-        for (auto *p : plugin.getServer().getOnlinePlayers())
-        {
+        for (auto *p : plugin.getServer().getOnlinePlayers()) {
             if (p == player || p == target)
                 continue;
             auto u = plugin.db->getOnlineUser(p->getXuid());
-            if (u && u->enabled_ss)
-            {
+            if (u && u->enabled_ss) {
                 p->sendMessage("\u00a78[\u00a7eSocialSpy\u00a78] \u00a77" + player->getName() +
                                " -> " + target->getName() + ": \u00a7f" + msg);
             }
@@ -63,8 +66,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(reply, "Reply to the last person who messaged you!", cmd_reply,
-                     info.usages = {"/reply <message: message>"};
-                     info.permissions = {"primebds.command.reply"};
-                     info.aliases = {"r"};);
 } // namespace primebds::commands

@@ -1,3 +1,6 @@
+/// @file alist.cpp
+/// Manages server allowlist profiles and server allowlist!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
@@ -7,48 +10,51 @@
 #include <set>
 
 namespace fs = std::filesystem;
+    static bool cmd_alist(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(alist, "Manages server allowlist profiles and server allowlist!", cmd_alist,
+                     info.usages = {
+                         "/alist (list|check|profiles)",
+                         "/alist (add|remove) <player: string> [ignore_max_player_limit: bool]",
+                         "/alist (create|use|delete|clear) <name: string>",
+                         "/alist (inherit) <child: string> <parent: string>"};
+                     info.permissions = {"primebds.command.alist"}; info.aliases = {"wlist"};);
+
 using json = nlohmann::json;
 
-namespace primebds::commands
-{
+namespace primebds::commands {
 
     /// Gets the path to the active allowlist.json in the BDS server root
-    static fs::path getAllowlistPath(PrimeBDS &plugin)
-    {
+    static fs::path getAllowlistPath(PrimeBDS &plugin) {
         // getDataFolder() = {root}/plugins/{name}/
         return plugin.getDataFolder().parent_path().parent_path() / "allowlist.json";
     }
 
     /// Gets the allowlist profiles directory, creating it if needed
-    static fs::path getProfilesDir(PrimeBDS &plugin)
-    {
+    static fs::path getProfilesDir(PrimeBDS &plugin) {
         auto dir = plugin.getDataFolder() / "allowlist_profiles";
         fs::create_directories(dir);
         return dir;
     }
 
     /// Reads a JSON array from a file, returning empty array on failure
-    static json readJsonFile(const fs::path &path)
-    {
+    static json readJsonFile(const fs::path &path) {
         if (!fs::exists(path))
             return json::array();
         std::ifstream f(path);
         if (!f.is_open())
             return json::array();
-        try
-        {
+        try {
             auto data = json::parse(f);
             return data.is_array() ? data : json::array();
-        }
-        catch (...)
-        {
+        } catch (...) {
             return json::array();
         }
     }
 
     /// Writes a JSON value to a file with 4-space indent
-    static bool writeJsonFile(const fs::path &path, const json &data)
-    {
+    static bool writeJsonFile(const fs::path &path, const json &data) {
         fs::create_directories(path.parent_path());
         std::ofstream f(path);
         if (!f.is_open())
@@ -58,38 +64,30 @@ namespace primebds::commands
     }
 
     /// Ensures the default profile exists, seeded from the live allowlist.json
-    static void ensureDefaultProfile(PrimeBDS &plugin)
-    {
+    static void ensureDefaultProfile(PrimeBDS &plugin) {
         auto default_path = getProfilesDir(plugin) / "default.json";
         auto allowlist_path = getAllowlistPath(plugin);
 
-        if (!fs::exists(default_path) && fs::exists(allowlist_path))
-        {
-            try
-            {
+        if (!fs::exists(default_path) && fs::exists(allowlist_path)) {
+            try {
                 fs::copy_file(allowlist_path, default_path);
                 plugin.getLogger().info("Initialized allowlist_profiles/default.json from existing allowlist.json");
-            }
-            catch (const std::exception &e)
-            {
+            } catch (const std::exception &e) {
                 plugin.getLogger().warning("Failed to create default allowlist profile: {}", e.what());
             }
         }
     }
 
+    /// Manages server allowlist profiles and server allowlist!
     static bool cmd_alist(PrimeBDS &plugin, endstone::CommandSender &sender,
-                          const std::vector<std::string> &args)
-    {
-        if (args.empty())
-        {
+                          const std::vector<std::string> &args) {
+        if (args.empty()) {
             sender.sendMessage("\u00a7cUsage: /alist <add|remove|list|check|create|delete|use|profiles|inherit|clear> ...");
             return false;
         }
 
-        for (auto &arg : args)
-        {
-            if (arg.find('@') != std::string::npos)
-            {
+        for (auto &arg : args) {
+            if (arg.find('@') != std::string::npos) {
                 sender.sendMessage("\u00a7cTarget selectors are invalid for this command");
                 return false;
             }
@@ -103,10 +101,8 @@ namespace primebds::commands
 
         auto &server = plugin.getServer();
 
-        if (sub == "add")
-        {
-            if (args.size() < 2)
-            {
+        if (sub == "add") {
+            if (args.size() < 2) {
                 sender.sendMessage("Usage: /alist add <player> [ignore_max_player_limit]");
                 return true;
             }
@@ -114,8 +110,7 @@ namespace primebds::commands
             std::string player_name = args[1];
             std::optional<bool> ignore_limit;
 
-            if (args.size() >= 3)
-            {
+            if (args.size() >= 3) {
                 std::string val = args[2];
                 for (auto &c : val)
                     c = static_cast<char>(std::tolower(c));
@@ -123,8 +118,7 @@ namespace primebds::commands
                     ignore_limit = true;
                 else if (val == "false")
                     ignore_limit = false;
-                else
-                {
+                else {
                     sender.sendMessage("\u00a7rignore_max_player_limit must be 'true' or 'false'");
                     return true;
                 }
@@ -133,37 +127,28 @@ namespace primebds::commands
             server.dispatchCommand(server.getCommandSender(), "whitelist add \"" + player_name + "\"");
             sender.sendMessage("\u00a7rAdded \u00a7b" + player_name + "\u00a7r to allowlist.");
 
-            if (ignore_limit.has_value())
-            {
+            if (ignore_limit.has_value()) {
                 auto allowlist_path = getAllowlistPath(plugin);
                 auto data = readJsonFile(allowlist_path);
                 bool modified = false;
 
-                for (auto &entry : data)
-                {
-                    if (entry.value("name", "") == player_name)
-                    {
+                for (auto &entry : data) {
+                    if (entry.value("name", "") == player_name) {
                         std::string xuid;
                         auto *player = server.getPlayer(player_name);
-                        if (player)
-                        {
+                        if (player) {
                             xuid = player->getXuid();
-                        }
-                        else
-                        {
+                        } else {
                             auto user = plugin.db->getUserByName(player_name);
                             if (user)
                                 xuid = user->xuid;
                         }
 
-                        if (!xuid.empty())
-                        {
+                        if (!xuid.empty()) {
                             entry["ignoresPlayerLimit"] = ignore_limit.value();
                             entry["xuid"] = xuid;
                             modified = true;
-                        }
-                        else
-                        {
+                        } else {
                             sender.sendMessage("\u00a7r" + player_name +
                                                " does not have a recorded xuid, ignore_max_player_limit could not be set");
                         }
@@ -171,8 +156,7 @@ namespace primebds::commands
                     }
                 }
 
-                if (modified)
-                {
+                if (modified) {
                     writeJsonFile(allowlist_path, data);
                     plugin.getLogger().info("Updated ignoresPlayerLimit for {} to {}",
                                             player_name, ignore_limit.value());
@@ -183,10 +167,8 @@ namespace primebds::commands
             return true;
         }
 
-        if (sub == "remove")
-        {
-            if (args.size() < 2)
-            {
+        if (sub == "remove") {
+            if (args.size() < 2) {
                 sender.sendMessage("Usage: /alist remove <player>");
                 return true;
             }
@@ -197,25 +179,21 @@ namespace primebds::commands
             return true;
         }
 
-        if (sub == "list")
-        {
+        if (sub == "list") {
             auto allowlist_path = getAllowlistPath(plugin);
-            if (!fs::exists(allowlist_path))
-            {
+            if (!fs::exists(allowlist_path)) {
                 sender.sendMessage("\u00a7cAllowlist file not found.");
                 return true;
             }
 
             auto data = readJsonFile(allowlist_path);
-            if (data.empty())
-            {
+            if (data.empty()) {
                 sender.sendMessage("\u00a7rAllowlist is empty.");
                 return true;
             }
 
             std::string msg = "\u00a7rAllowlist players:";
-            for (auto &entry : data)
-            {
+            for (auto &entry : data) {
                 std::string name = entry.value("name", "[unknown]");
                 bool ignores = entry.value("ignoresPlayerLimit", false);
                 if (ignores)
@@ -227,13 +205,11 @@ namespace primebds::commands
             return true;
         }
 
-        if (sub == "check")
-        {
+        if (sub == "check") {
             auto profile_name = plugin.serverdb->getServerInfo().allowlist_profile;
             auto allowlist_path = getAllowlistPath(plugin);
 
-            if (!fs::exists(allowlist_path))
-            {
+            if (!fs::exists(allowlist_path)) {
                 sender.sendMessage("\u00a7cActive allowlist.json file not found.");
                 return true;
             }
@@ -244,10 +220,8 @@ namespace primebds::commands
             return true;
         }
 
-        if (sub == "create")
-        {
-            if (args.size() < 2)
-            {
+        if (sub == "create") {
+            if (args.size() < 2) {
                 sender.sendMessage("Usage: /alist create <name>");
                 return true;
             }
@@ -255,8 +229,7 @@ namespace primebds::commands
             std::string profile_name = args[1];
             auto path = getProfilesDir(plugin) / (profile_name + ".json");
 
-            if (fs::exists(path))
-            {
+            if (fs::exists(path)) {
                 sender.sendMessage("Allowlist profile '" + profile_name + "' already exists.");
                 return true;
             }
@@ -268,10 +241,8 @@ namespace primebds::commands
             return true;
         }
 
-        if (sub == "delete")
-        {
-            if (args.size() < 2)
-            {
+        if (sub == "delete") {
+            if (args.size() < 2) {
                 sender.sendMessage("Usage: /alist delete <name>");
                 return true;
             }
@@ -279,28 +250,22 @@ namespace primebds::commands
             std::string profile_name = args[1];
             auto path = getProfilesDir(plugin) / (profile_name + ".json");
 
-            if (!fs::exists(path))
-            {
+            if (!fs::exists(path)) {
                 sender.sendMessage("Allowlist profile '" + profile_name + "' does not exist.");
                 return true;
             }
 
-            try
-            {
+            try {
                 fs::remove(path);
                 sender.sendMessage("Deleted allowlist profile '" + profile_name + "'.");
-            }
-            catch (const std::exception &e)
-            {
+            } catch (const std::exception &e) {
                 sender.sendMessage("\u00a7cFailed to delete profile: " + std::string(e.what()));
             }
             return true;
         }
 
-        if (sub == "use")
-        {
-            if (args.size() < 2)
-            {
+        if (sub == "use") {
+            if (args.size() < 2) {
                 sender.sendMessage("Usage: /alist use <profile>");
                 return true;
             }
@@ -309,8 +274,7 @@ namespace primebds::commands
             auto profiles_dir = getProfilesDir(plugin);
             auto target_path = profiles_dir / (target_profile + ".json");
 
-            if (!fs::exists(target_path))
-            {
+            if (!fs::exists(target_path)) {
                 sender.sendMessage("Profile '" + target_profile + "' does not exist.");
                 return true;
             }
@@ -320,45 +284,35 @@ namespace primebds::commands
             auto current_profile_path = profiles_dir / (current_profile + ".json");
 
             // Backup current allowlist to the current profile
-            if (fs::exists(allowlist_path))
-            {
-                try
-                {
+            if (fs::exists(allowlist_path)) {
+                try {
                     fs::copy_file(allowlist_path, current_profile_path,
                                   fs::copy_options::overwrite_existing);
                     plugin.getLogger().info("Backed up allowlist.json to profile '{}'", current_profile);
-                }
-                catch (const std::exception &e)
-                {
+                } catch (const std::exception &e) {
                     plugin.getLogger().warning("Failed to backup allowlist: {}", e.what());
                 }
             }
 
             // Copy target profile to allowlist.json and activate
-            try
-            {
+            try {
                 fs::copy_file(target_path, allowlist_path, fs::copy_options::overwrite_existing);
                 plugin.serverdb->updateServerInfo("allowlist_profile", target_profile);
                 server.dispatchCommand(server.getCommandSender(), "whitelist reload");
                 sender.sendMessage("Activated allowlist profile '" + target_profile + "'");
-            }
-            catch (const std::exception &e)
-            {
+            } catch (const std::exception &e) {
                 sender.sendMessage("\u00a7cFailed to switch profile: " + std::string(e.what()));
             }
             return true;
         }
 
-        if (sub == "profiles")
-        {
+        if (sub == "profiles") {
             auto profiles_dir = getProfilesDir(plugin);
             auto current_profile = plugin.serverdb->getServerInfo().allowlist_profile;
             std::string msg;
 
-            for (auto &entry : fs::directory_iterator(profiles_dir))
-            {
-                if (entry.path().extension() == ".json")
-                {
+            for (auto &entry : fs::directory_iterator(profiles_dir)) {
+                if (entry.path().extension() == ".json") {
                     std::string name = entry.path().stem().string();
                     if (name == current_profile)
                         msg += "\n\u00a78- \u00a7a" + name + " \u00a77(current)";
@@ -367,8 +321,7 @@ namespace primebds::commands
                 }
             }
 
-            if (msg.empty())
-            {
+            if (msg.empty()) {
                 sender.sendMessage("\u00a7cNo saved allowlist profiles.");
                 return true;
             }
@@ -377,10 +330,8 @@ namespace primebds::commands
             return true;
         }
 
-        if (sub == "inherit")
-        {
-            if (args.size() < 3)
-            {
+        if (sub == "inherit") {
+            if (args.size() < 3) {
                 sender.sendMessage("Usage: /alist inherit <child> <parent>");
                 return true;
             }
@@ -391,19 +342,16 @@ namespace primebds::commands
             auto child_path = profiles_dir / (child_name + ".json");
             auto parent_path = profiles_dir / (parent_name + ".json");
 
-            if (!fs::exists(child_path))
-            {
+            if (!fs::exists(child_path)) {
                 sender.sendMessage("Child profile '" + child_name + "' does not exist.");
                 return true;
             }
-            if (!fs::exists(parent_path))
-            {
+            if (!fs::exists(parent_path)) {
                 sender.sendMessage("Parent profile '" + parent_name + "' does not exist.");
                 return true;
             }
 
-            try
-            {
+            try {
                 auto parent_data = readJsonFile(parent_path);
                 auto child_data = readJsonFile(child_path);
 
@@ -411,8 +359,7 @@ namespace primebds::commands
                 for (auto &e : child_data)
                     child_names.insert(e.value("name", ""));
 
-                for (auto &e : parent_data)
-                {
+                for (auto &e : parent_data) {
                     if (child_names.find(e.value("name", "")) == child_names.end())
                         child_data.push_back(e);
                 }
@@ -422,25 +369,20 @@ namespace primebds::commands
                                    " entries from '" + parent_name + "' into '" + child_name + "'");
 
                 auto current_profile = plugin.serverdb->getServerInfo().allowlist_profile;
-                if (current_profile == child_name)
-                {
+                if (current_profile == child_name) {
                     writeJsonFile(getAllowlistPath(plugin), child_data);
                     server.dispatchCommand(server.getCommandSender(), "whitelist reload");
                     sender.sendMessage("Updated live allowlist.json and reloaded whitelist for active profile '" +
                                        child_name + "'");
                 }
-            }
-            catch (const std::exception &e)
-            {
+            } catch (const std::exception &e) {
                 sender.sendMessage("\u00a7cFailed to inherit profile: " + std::string(e.what()));
             }
             return true;
         }
 
-        if (sub == "clear")
-        {
-            if (args.size() < 2)
-            {
+        if (sub == "clear") {
+            if (args.size() < 2) {
                 sender.sendMessage("Usage: /alist clear <profile>");
                 return true;
             }
@@ -449,21 +391,18 @@ namespace primebds::commands
             auto profiles_dir = getProfilesDir(plugin);
             auto target_path = profiles_dir / (target_profile + ".json");
 
-            if (!fs::exists(target_path))
-            {
+            if (!fs::exists(target_path)) {
                 sender.sendMessage("Profile '" + target_profile + "' does not exist.");
                 return true;
             }
 
             auto data = readJsonFile(target_path);
-            if (data.empty())
-            {
+            if (data.empty()) {
                 sender.sendMessage("Profile '" + target_profile + "' is already empty.");
                 return true;
             }
 
-            for (auto &entry : data)
-            {
+            for (auto &entry : data) {
                 std::string name = entry.value("name", "");
                 if (!name.empty())
                     server.dispatchCommand(server.getCommandSender(), "whitelist remove \"" + name + "\"");
@@ -472,14 +411,11 @@ namespace primebds::commands
             writeJsonFile(target_path, json::array());
 
             auto current_profile = plugin.serverdb->getServerInfo().allowlist_profile;
-            if (current_profile == target_profile)
-            {
+            if (current_profile == target_profile) {
                 writeJsonFile(getAllowlistPath(plugin), json::array());
                 server.dispatchCommand(server.getCommandSender(), "whitelist reload");
                 sender.sendMessage("Cleared and reloaded active profile '" + target_profile + "'");
-            }
-            else
-            {
+            } else {
                 sender.sendMessage("Cleared profile '" + target_profile + "'");
             }
             return true;
@@ -489,12 +425,5 @@ namespace primebds::commands
         return false;
     }
 
-    REGISTER_COMMAND(alist, "Manages server allowlist profiles and server allowlist!", cmd_alist,
-                     info.usages = {
-                         "/alist (list|check|profiles)",
-                         "/alist (add|remove) <player: string> [ignore_max_player_limit: bool]",
-                         "/alist (create|use|delete|clear) <name: string>",
-                         "/alist (inherit) <child: string> <parent: string>"};
-                     info.permissions = {"primebds.command.alist"}; info.aliases = {"wlist"};);
 
 } // namespace primebds::commands

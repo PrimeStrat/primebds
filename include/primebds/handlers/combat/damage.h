@@ -5,13 +5,11 @@
 
 #include <endstone/endstone.hpp>
 
-namespace primebds
-{
+namespace primebds {
     class PrimeBDS;
 }
 
-namespace primebds::handlers::combat
-{
+namespace primebds::handlers::combat {
 
     void handleDamageEvent(PrimeBDS &plugin, endstone::ActorDamageEvent &event);
 

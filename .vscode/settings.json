@@ -7,5 +7,11 @@
             "pattern": "**/src/glibc_compat.cpp",
             "configuration": "Linux"
         }
-    ]
+    ],
+    "[cpp]": {
+        "editor.formatOnSave": false
+    },
+    "[c]": {
+        "editor.formatOnSave": false
+    }
 }

@@ -15,15 +15,13 @@
 #include <filesystem>
 #include <set>
 
-namespace primebds
-{
+namespace primebds {
 
     // ---------------------------------------------------------------------------
     // Plugin lifecycle
     // ---------------------------------------------------------------------------
 
-    void PrimeBDS::onLoad()
-    {
+    void PrimeBDS::onLoad() {
         getLogger().info("PrimeBDS v{} loading...", getDescription().getVersion());
 
         // Ensure data directory exists
@@ -49,8 +47,7 @@ namespace primebds
         last_shutdown_time = (int64_t)std::time(nullptr);
     }
 
-    void PrimeBDS::onEnable()
-    {
+    void PrimeBDS::onEnable() {
         getLogger().info("PrimeBDS v{} enabled.", getDescription().getVersion());
 
         // Register event listener
@@ -79,13 +76,11 @@ namespace primebds
         checkForInactiveSessions();
     }
 
-    void PrimeBDS::onDisable()
-    {
+    void PrimeBDS::onDisable() {
         getLogger().info("PrimeBDS v{} disabled.", getDescription().getVersion());
 
         // End all active sessions
-        for (auto *player : getServer().getOnlinePlayers())
-        {
+        for (auto *player : getServer().getOnlinePlayers()) {
             sldb->endSession(player->getXuid());
             // Save logout position
             auto loc = player->getLocation();
@@ -108,14 +103,11 @@ namespace primebds
 
     bool PrimeBDS::onCommand(endstone::CommandSender &sender,
                              const endstone::Command &command,
-                             const std::vector<std::string> &args)
-    {
+                             const std::vector<std::string> &args) {
         auto &registry = CommandRegistry::instance();
         auto *reg = registry.find(command.getName());
-        if (reg)
-        {
-            if (!config::ConfigManager::instance().isCommandEnabled(command.getName()))
-            {
+        if (reg) {
+            if (!config::ConfigManager::instance().isCommandEnabled(command.getName())) {
                 sender.sendMessage("\u00a7cThis command is disabled.");
                 return false;
             }
@@ -129,12 +121,10 @@ namespace primebds
     // Helpers
     // ---------------------------------------------------------------------------
 
-    void PrimeBDS::reloadCustomPerms(endstone::Player &player)
-    {
+    void PrimeBDS::reloadCustomPerms(endstone::Player &player) {
         auto &pm = permissions::PermissionManager::instance();
         auto user = db->getOnlineUser(player.getXuid());
-        if (!user)
-        {
+        if (!user) {
             // Player not in DB yet — save them first
             db->saveUser(player.getXuid(), player.getUniqueId().str(),
                          player.getName(), static_cast<int>(player.getPing().count()),
@@ -172,23 +162,19 @@ namespace primebds
             final_permissions[perm] = allowed;
 
         // Apply linked groups
-        for (auto &group : linked_groups)
-        {
+        for (auto &group : linked_groups) {
             bool seen_true = false;
             bool seen_false = false;
-            for (auto &perm : group)
-            {
+            for (auto &perm : group) {
                 auto it = final_permissions.find(perm);
-                if (it != final_permissions.end())
-                {
+                if (it != final_permissions.end()) {
                     if (it->second)
                         seen_true = true;
                     else
                         seen_false = true;
                 }
             }
-            if (seen_true || seen_false)
-            {
+            if (seen_true || seen_false) {
                 bool group_value = seen_true;
                 for (auto &perm : group)
                     final_permissions[perm] = group_value;
@@ -196,10 +182,8 @@ namespace primebds
         }
 
         // Remove any existing primebdsoverride attachment
-        for (auto *info : player.getEffectivePermissions())
-        {
-            if (info->getPermission() == "primebdsoverride")
-            {
+        for (auto *info : player.getEffectivePermissions()) {
+            if (info->getPermission() == "primebdsoverride") {
                 auto *att = info->getAttachment();
                 if (att)
                     att->remove();
@@ -216,8 +200,7 @@ namespace primebds
             "minecraft", "minecraft.command", "endstone", "endstone.command"};
 
         std::map<std::string, bool> plugin_stars;
-        for (auto &[perm, value] : final_permissions)
-        {
+        for (auto &[perm, value] : final_permissions) {
             if (internal_perms.count(perm))
                 continue;
             auto dot = perm.find('.');
@@ -228,8 +211,7 @@ namespace primebds
         }
 
         // Apply permissions
-        for (auto &[perm, value] : final_permissions)
-        {
+        for (auto &[perm, value] : final_permissions) {
             if (internal_perms.count(perm))
                 continue;
             auto dot = perm.find('.');
@@ -244,13 +226,10 @@ namespace primebds
         // Auto op/deop based on rank
         auto rank_lower = internal_rank;
         std::transform(rank_lower.begin(), rank_lower.end(), rank_lower.begin(), ::tolower);
-        if (rank_lower == "operator" && !player.isOp() && player.isValid())
-        {
+        if (rank_lower == "operator" && !player.isOp() && player.isValid()) {
             getServer().dispatchCommand(getServer().getCommandSender(),
                                         "op \"" + user->name + "\"");
-        }
-        else if (rank_lower != "operator" && player.isOp() && player.isValid())
-        {
+        } else if (rank_lower != "operator" && player.isOp() && player.isValid()) {
             getServer().dispatchCommand(getServer().getCommandSender(),
                                         "deop \"" + user->name + "\"");
         }
@@ -261,12 +240,10 @@ namespace primebds
         pm.invalidatePermCache(player.getXuid());
     }
 
-    void PrimeBDS::checkForInactiveSessions()
-    {
+    void PrimeBDS::checkForInactiveSessions() {
         // End any sessions that are still open (from unclean shutdown)
         auto active = sldb->getActiveSessions();
-        for (auto &session : active)
-        {
+        for (auto &session : active) {
             sldb->endSession(session["xuid"]);
         }
     }
@@ -275,98 +252,79 @@ namespace primebds
     // EventListener delegation
     // ---------------------------------------------------------------------------
 
-    void EventListener::onPlayerDeath(endstone::PlayerDeathEvent &event)
-    {
+    void EventListener::onPlayerDeath(endstone::PlayerDeathEvent &event) {
         handlers::handleDeathEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerTeleport(endstone::PlayerTeleportEvent &event)
-    {
+    void EventListener::onPlayerTeleport(endstone::PlayerTeleportEvent &event) {
         handlers::handleTeleportEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerBedEnter(endstone::PlayerBedEnterEvent &event)
-    {
+    void EventListener::onPlayerBedEnter(endstone::PlayerBedEnterEvent &event) {
         handlers::handleBedEnterEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerEmote(endstone::PlayerEmoteEvent &event)
-    {
+    void EventListener::onPlayerEmote(endstone::PlayerEmoteEvent &event) {
         handlers::handleEmoteEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerSkinChange(endstone::PlayerSkinChangeEvent &event)
-    {
+    void EventListener::onPlayerSkinChange(endstone::PlayerSkinChangeEvent &event) {
         handlers::handleSkinChangeEvent(plugin_, event);
     }
 
-    void EventListener::onLeavesDecay(endstone::LeavesDecayEvent &event)
-    {
+    void EventListener::onLeavesDecay(endstone::LeavesDecayEvent &event) {
         handlers::handleLeavesDecayEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerGameModeChange(endstone::PlayerGameModeChangeEvent &event)
-    {
+    void EventListener::onPlayerGameModeChange(endstone::PlayerGameModeChangeEvent &event) {
         handlers::handleGamemodeEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerInteractActor(endstone::PlayerInteractActorEvent &event)
-    {
+    void EventListener::onPlayerInteractActor(endstone::PlayerInteractActorEvent &event) {
         handlers::handleInteractEvent(plugin_, event);
     }
 
-    void EventListener::onItemPickup(endstone::PlayerPickupItemEvent &event)
-    {
+    void EventListener::onItemPickup(endstone::PlayerPickupItemEvent &event) {
         handlers::handleItemPickupEvent(plugin_, event);
     }
 
-    void EventListener::onEntityDamage(endstone::ActorDamageEvent &event)
-    {
+    void EventListener::onEntityDamage(endstone::ActorDamageEvent &event) {
         handlers::combat::handleDamageEvent(plugin_, event);
     }
 
-    void EventListener::onEntityKnockback(endstone::ActorKnockbackEvent &event)
-    {
+    void EventListener::onEntityKnockback(endstone::ActorKnockbackEvent &event) {
         handlers::combat::handleKnockbackEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerLogin(endstone::PlayerLoginEvent &event)
-    {
+    void EventListener::onPlayerLogin(endstone::PlayerLoginEvent &event) {
         handlers::connections::handleLoginEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerJoin(endstone::PlayerJoinEvent &event)
-    {
+    void EventListener::onPlayerJoin(endstone::PlayerJoinEvent &event) {
         handlers::connections::handleJoinEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerQuit(endstone::PlayerQuitEvent &event)
-    {
+    void EventListener::onPlayerQuit(endstone::PlayerQuitEvent &event) {
         handlers::connections::handleLeaveEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerKick(endstone::PlayerKickEvent &event)
-    {
+    void EventListener::onPlayerKick(endstone::PlayerKickEvent &event) {
         handlers::connections::handleKickEvent(plugin_, event);
     }
 
-    void EventListener::onPlayerCommand(endstone::PlayerCommandEvent &event)
-    {
+    void EventListener::onPlayerCommand(endstone::PlayerCommandEvent &event) {
         handlers::preprocesses::handleCommandPreprocess(plugin_, event);
     }
 
-    void EventListener::onServerCommand(endstone::ServerCommandEvent &event)
-    {
+    void EventListener::onServerCommand(endstone::ServerCommandEvent &event) {
         handlers::preprocesses::handleServerCommandPreprocess(plugin_, event);
     }
 
-    void EventListener::onPlayerChat(endstone::PlayerChatEvent &event)
-    {
+    void EventListener::onPlayerChat(endstone::PlayerChatEvent &event) {
         handlers::handleChatEvent(plugin_, event);
     }
 
-    void EventListener::onServerLoad(endstone::ServerLoadEvent &event)
-    {
+    void EventListener::onServerLoad(endstone::ServerLoadEvent &event) {
         handlers::handleServerLoadEvent(plugin_, event);
     }
 
@@ -376,8 +334,7 @@ namespace primebds
 // Endstone plugin entry point
 // ---------------------------------------------------------------------------
 
-ENDSTONE_PLUGIN("primebds", "3.4.0", primebds::PrimeBDS)
-{
+ENDSTONE_PLUGIN("primebds", "3.4.0", primebds::PrimeBDS) {
     description = "An essentials plugin for diagnostics, stability, and quality of life on Minecraft Bedrock Edition.";
     authors = {"PrimeStrat"};
 

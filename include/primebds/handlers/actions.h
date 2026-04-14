@@ -5,13 +5,11 @@
 
 #include <endstone/endstone.hpp>
 
-namespace primebds
-{
+namespace primebds {
     class PrimeBDS;
 }
 
-namespace primebds::handlers
-{
+namespace primebds::handlers {
 
     void handleGamemodeEvent(PrimeBDS &plugin, endstone::PlayerGameModeChangeEvent &event);
     void handleTeleportEvent(PrimeBDS &plugin, endstone::PlayerTeleportEvent &event);

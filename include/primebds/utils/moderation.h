@@ -6,8 +6,7 @@
 #include <cstdint>
 #include <string>
 
-namespace primebds::utils
-{
+namespace primebds::utils {
 
     std::string formatBanMessage(const std::string &reason, int64_t expiration,
                                  const std::string &server_name = "");

@@ -1,27 +1,34 @@
+/// @file spawn.cpp
+/// Warps you to the spawn!
+
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
 
 #include <ctime>
 #include <map>
 
-namespace primebds::commands
-{
+namespace primebds::commands {
+
+    static bool cmd_spawn(PrimeBDS &, endstone::CommandSender &,
+                        const std::vector<std::string> &);
+
+    REGISTER_COMMAND(spawn, "Warps you to the spawn!", cmd_spawn,
+                     info.usages = {"/spawn"};
+                     info.permissions = {"primebds.command.spawn"};);
 
     static std::map<std::string, double> spawn_cooldowns;
 
+    /// Warps you to the spawn!
     static bool cmd_spawn(PrimeBDS &plugin, endstone::CommandSender &sender,
-                          const std::vector<std::string> &args)
-    {
+                          const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
-        if (!player)
-        {
+        if (!player) {
             sender.sendMessage("\u00a7cOnly players can use this command.");
             return true;
         }
 
         auto spawn = plugin.serverdb->getSpawn();
-        if (!spawn)
-        {
+        if (!spawn) {
             sender.sendMessage("\u00a7cNo spawn has been set yet");
             return false;
         }
@@ -34,8 +41,7 @@ namespace primebds::commands
         double now = (double)std::time(nullptr);
         double cooldown_time = spawn->cooldown;
         auto it = spawn_cooldowns.find(player->getXuid());
-        if (it != spawn_cooldowns.end() && now - it->second < cooldown_time)
-        {
+        if (it != spawn_cooldowns.end() && now - it->second < cooldown_time) {
             double rem = cooldown_time - (now - it->second);
             char buf[64];
             std::snprintf(buf, sizeof(buf), "\u00a7cYou must wait %.1fs before using /spawn again", rem);
@@ -49,7 +55,4 @@ namespace primebds::commands
         return true;
     }
 
-    REGISTER_COMMAND(spawn, "Warps you to the spawn!", cmd_spawn,
-                     info.usages = {"/spawn"};
-                     info.permissions = {"primebds.command.spawn"};);
 } // namespace primebds::commands
