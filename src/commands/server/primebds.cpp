@@ -66,7 +66,6 @@ namespace primebds::commands
         if (args.empty())
         {
             sender.sendMessage("\u00a7b--- PrimeBDS v3.4.0 ---");
-            sender.sendMessage("\u00a77C++ Port of PrimeBDS for Endstone");
             sender.sendMessage("\u00a77Use /primebds <config|reloadconfig|info> for more options");
             return true;
         }
@@ -80,9 +79,6 @@ namespace primebds::commands
             sender.sendMessage("\u00a7b--- PrimeBDS Info ---");
             sender.sendMessage("\u00a77Version: \u00a7e3.4.0");
             sender.sendMessage("\u00a77Platform: \u00a7eC++ / Endstone");
-            int online = (int)plugin.getServer().getOnlinePlayers().size();
-            int max_p = plugin.getServer().getMaxPlayers();
-            sender.sendMessage("\u00a77Players: \u00a7e" + std::to_string(online) + "/" + std::to_string(max_p));
             return true;
         }
 
