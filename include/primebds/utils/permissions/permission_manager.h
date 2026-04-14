@@ -36,6 +36,12 @@ namespace primebds::permissions
 
         std::string getPermissionHeader(endstone::Plugin &plugin);
 
+        /// Returns the rank names from the permissions config in order.
+        std::vector<std::string> getRanks() const;
+
+        /// Returns true if rank1 outranks rank2 (lower index = higher rank).
+        bool checkInternalRank(const std::string &rank1, const std::string &rank2) const;
+
         nlohmann::json PERMISSIONS;
         std::vector<std::string> MANAGED_PERMISSIONS_LIST;
 

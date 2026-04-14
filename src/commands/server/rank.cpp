@@ -1,5 +1,6 @@
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
+#include "primebds/utils/permissions/permission_manager.h"
 
 #include <algorithm>
 
@@ -76,6 +77,7 @@ namespace primebds::commands
             }
 
             plugin.db->setUserRank(target->getXuid(), rank_name);
+            plugin.reloadCustomPerms(*target);
             sender.sendMessage("\u00a7e" + player_name + " \u00a7arank set to \u00a7e" + rank_name);
             return true;
         }
@@ -119,6 +121,14 @@ namespace primebds::commands
                 if (plugin.serverdb->addRankPermission(rank_name, perm))
                 {
                     sender.sendMessage("\u00a7aPermission \u00a7e" + perm + " \u00a7aadded to rank \u00a7e" + rank_name);
+                    // Reload permissions for all online players with this rank
+                    permissions::PermissionManager::instance().clearPrefixSuffixCache();
+                    for (auto *p : plugin.getServer().getOnlinePlayers())
+                    {
+                        auto u = plugin.db->getOnlineUser(p->getXuid());
+                        if (u && u->internal_rank == rank_name)
+                            plugin.reloadCustomPerms(*p);
+                    }
                 }
                 else
                 {
@@ -130,6 +140,14 @@ namespace primebds::commands
                 if (plugin.serverdb->removeRankPermission(rank_name, perm))
                 {
                     sender.sendMessage("\u00a7aPermission \u00a7e" + perm + " \u00a7aremoved from rank \u00a7e" + rank_name);
+                    // Reload permissions for all online players with this rank
+                    permissions::PermissionManager::instance().clearPrefixSuffixCache();
+                    for (auto *p : plugin.getServer().getOnlinePlayers())
+                    {
+                        auto u = plugin.db->getOnlineUser(p->getXuid());
+                        if (u && u->internal_rank == rank_name)
+                            plugin.reloadCustomPerms(*p);
+                    }
                 }
                 else
                 {

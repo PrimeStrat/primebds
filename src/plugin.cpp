@@ -10,8 +10,10 @@
 #include "primebds/utils/permissions/permission_manager.h"
 #include "primebds/utils/logging.h"
 
+#include <algorithm>
 #include <ctime>
 #include <filesystem>
+#include <set>
 
 namespace primebds
 {
@@ -131,14 +133,132 @@ namespace primebds
     {
         auto &pm = permissions::PermissionManager::instance();
         auto user = db->getOnlineUser(player.getXuid());
-        std::string rank = (user && !user->internal_rank.empty()) ? user->internal_rank : "default";
-        auto perms = pm.getRankPermissions(rank);
-        for (auto &[perm, value] : perms)
+        if (!user)
         {
-            // Apply rank permissions to the player
-            // endstone doesn't have per-player permission attachment yet,
-            // so this is a placeholder for future API support
+            // Player not in DB yet — save them first
+            db->saveUser(player.getXuid(), player.getUniqueId().str(),
+                         player.getName(), static_cast<int>(player.getPing().count()),
+                         player.getDeviceOS(), player.getDeviceId(),
+                         static_cast<int64_t>(player.getRuntimeId()),
+                         player.getGameVersion());
+            user = db->getOnlineUser(player.getXuid());
+            if (!user)
+                return;
         }
+
+        std::string internal_rank = pm.checkRankExists(*this, player, user->internal_rank);
+        auto rank_permissions = pm.getRankPermissions(internal_rank);
+        auto user_permissions = db->getPermissions(player.getXuid());
+        auto &managed_perms = pm.MANAGED_PERMISSIONS_LIST;
+
+        // Linked permission groups — if any in the group are true, all become true
+        static const std::vector<std::vector<std::string>> linked_groups = {
+            {"primebds.command.permban", "endstone.command.ban"},
+            {"primebds.command.ipban", "endstone.command.banip"},
+            {"primebds.command.removeban", "endstone.command.unban", "endstone.command.unbanip"},
+            {"primebds.command.filterlist", "endstone.command.banlist"}};
+
+        // Build final permission map: start all managed perms as false
+        std::map<std::string, bool> final_permissions;
+        for (auto &p : managed_perms)
+            final_permissions[p] = false;
+
+        // Layer rank permissions
+        for (auto &[perm, allowed] : rank_permissions)
+            final_permissions[perm] = allowed;
+
+        // Layer user-specific overrides (highest priority)
+        for (auto &[perm, allowed] : user_permissions)
+            final_permissions[perm] = allowed;
+
+        // Apply linked groups
+        for (auto &group : linked_groups)
+        {
+            bool seen_true = false;
+            bool seen_false = false;
+            for (auto &perm : group)
+            {
+                auto it = final_permissions.find(perm);
+                if (it != final_permissions.end())
+                {
+                    if (it->second)
+                        seen_true = true;
+                    else
+                        seen_false = true;
+                }
+            }
+            if (seen_true || seen_false)
+            {
+                bool group_value = seen_true;
+                for (auto &perm : group)
+                    final_permissions[perm] = group_value;
+            }
+        }
+
+        // Remove any existing primebdsoverride attachment
+        for (auto *info : player.getEffectivePermissions())
+        {
+            if (info->getPermission() == "primebdsoverride")
+            {
+                auto *att = info->getAttachment();
+                if (att)
+                    att->remove();
+            }
+        }
+
+        // Create new attachment and apply all permissions
+        auto *attachment = player.addAttachment(*this, "primebdsoverride", true);
+        if (!attachment)
+            return;
+
+        // Detect plugin-star overrides (e.g. "minecraft" or "minecraft.command")
+        static const std::set<std::string> internal_perms = {
+            "minecraft", "minecraft.command", "endstone", "endstone.command"};
+
+        std::map<std::string, bool> plugin_stars;
+        for (auto &[perm, value] : final_permissions)
+        {
+            if (internal_perms.count(perm))
+                continue;
+            auto dot = perm.find('.');
+            std::string prefix = (dot != std::string::npos) ? perm.substr(0, dot) : perm;
+            std::string cmd_key = prefix + ".command";
+            if (prefix == perm || cmd_key == perm)
+                plugin_stars[prefix] = value;
+        }
+
+        // Apply permissions
+        for (auto &[perm, value] : final_permissions)
+        {
+            if (internal_perms.count(perm))
+                continue;
+            auto dot = perm.find('.');
+            std::string prefix = (dot != std::string::npos) ? perm.substr(0, dot) : perm;
+            auto star_it = plugin_stars.find(prefix);
+            if (star_it != plugin_stars.end())
+                attachment->setPermission(perm, star_it->second);
+            else
+                attachment->setPermission(perm, value);
+        }
+
+        // Auto op/deop based on rank
+        auto rank_lower = internal_rank;
+        std::transform(rank_lower.begin(), rank_lower.end(), rank_lower.begin(), ::tolower);
+        if (rank_lower == "operator" && !player.isOp() && player.isValid())
+        {
+            getServer().dispatchCommand(getServer().getCommandSender(),
+                                        "op \"" + user->name + "\"");
+        }
+        else if (rank_lower != "operator" && player.isOp() && player.isValid())
+        {
+            getServer().dispatchCommand(getServer().getCommandSender(),
+                                        "deop \"" + user->name + "\"");
+        }
+
+        player.updateCommands();
+        player.recalculatePermissions();
+        pm.clearPrefixSuffixCache();
+        pm.invalidatePermCache(player.getXuid());
     }
 
     void PrimeBDS::checkForInactiveSessions()
@@ -259,7 +379,7 @@ namespace primebds
 ENDSTONE_PLUGIN("primebds", "3.4.0", primebds::PrimeBDS)
 {
     description = "An essentials plugin for diagnostics, stability, and quality of life on Minecraft Bedrock Edition.";
-    authors = {"primebds"};
+    authors = {"PrimeStrat"};
 
     // All commands are declared here for endstone registration.
     // Dispatch is handled by PrimeBDS::onCommand via CommandRegistry.

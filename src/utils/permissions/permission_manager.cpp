@@ -3,6 +3,7 @@
 
 #include "primebds/utils/permissions/permission_manager.h"
 #include "primebds/utils/config/config_manager.h"
+#include "primebds/plugin.h"
 
 #include <algorithm>
 #include <iostream>
@@ -231,6 +232,11 @@ namespace primebds::permissions
     bool PermissionManager::checkPermission(endstone::Player &player, const std::string &perm,
                                             const std::string &rank)
     {
+        // If we're not doing a rank-only check, use the player's actual permissions
+        // which include attachments set by reloadCustomPerms
+        if (player.isPermissionSet(perm))
+            return player.hasPermission(perm);
+
         auto xuid = player.getXuid();
 
         // Check cache first
@@ -245,10 +251,8 @@ namespace primebds::permissions
             }
         }
 
-        // Compute and cache
+        // Compute rank permissions and cache
         auto rank_perms = getRankPermissions(rank);
-
-        // Overlay user-specific permissions (from DB) would be added at the call site
 
         {
             std::lock_guard lock(mutex_);
@@ -311,6 +315,13 @@ namespace primebds::permissions
 
         std::cout << "[PrimeBDS] Invalid rank '" << rank << "' for " << player.getName()
                   << ", resetting to Default.\n";
+
+        // Reset the player's rank to Default in the DB
+        // Access the plugin's DB through the server — safe cast since we own the plugin
+        auto *pb = dynamic_cast<PrimeBDS *>(&plugin);
+        if (pb && pb->db)
+            pb->db->setUserRank(player.getXuid(), "Default");
+
         return "Default";
     }
 
@@ -338,6 +349,37 @@ namespace primebds::permissions
         auto name = toLower(perms[0].getName());
         auto dot = name.find('.');
         return dot != std::string::npos ? name.substr(0, dot) : name;
+    }
+
+    std::vector<std::string> PermissionManager::getRanks() const
+    {
+        std::vector<std::string> ranks;
+        for (auto &[key, val] : PERMISSIONS.items())
+            ranks.push_back(key);
+        return ranks;
+    }
+
+    bool PermissionManager::checkInternalRank(const std::string &rank1, const std::string &rank2) const
+    {
+        auto ranks = getRanks();
+        int idx1 = -1, idx2 = -1;
+        auto r1_lower = rank1;
+        auto r2_lower = rank2;
+        std::transform(r1_lower.begin(), r1_lower.end(), r1_lower.begin(), ::tolower);
+        std::transform(r2_lower.begin(), r2_lower.end(), r2_lower.begin(), ::tolower);
+
+        for (int i = 0; i < static_cast<int>(ranks.size()); ++i)
+        {
+            auto k = ranks[i];
+            std::transform(k.begin(), k.end(), k.begin(), ::tolower);
+            if (k == r1_lower)
+                idx1 = i;
+            if (k == r2_lower)
+                idx2 = i;
+        }
+        if (idx1 < 0 || idx2 < 0)
+            return false;
+        return idx1 < idx2;
     }
 
 } // namespace primebds::permissions

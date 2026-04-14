@@ -122,41 +122,42 @@ namespace primebds::handlers::preprocesses
             auto target = plugin.db->getUserByName(args[1]);
             if (target.has_value())
             {
-                bool is_exempt = false;
-                auto &pm = permissions::PermissionManager::instance();
-
+                // Map command to its exemption permission
+                std::string exempt_perm;
                 if (cmd == "warn")
-                {
-                    auto *tp = plugin.getServer().getPlayer(target->name);
-                    if (tp)
-                        is_exempt = pm.checkPermission(*tp, "primebds.exempt.warn", target->internal_rank);
-                }
+                    exempt_perm = "primebds.exempt.warn";
                 else if (cmd == "kick")
-                {
-                    auto *tp = plugin.getServer().getPlayer(target->name);
-                    if (tp)
-                        is_exempt = pm.checkPermission(*tp, "primebds.exempt.kick", target->internal_rank);
-                }
+                    exempt_perm = "primebds.exempt.kick";
                 else if (cmd == "mute" || cmd == "tempmute")
-                {
-                    auto *tp = plugin.getServer().getPlayer(target->name);
-                    if (tp)
-                        is_exempt = pm.checkPermission(*tp, "primebds.exempt.mute", target->internal_rank);
-                }
+                    exempt_perm = "primebds.exempt.mute";
                 else if (cmd == "permban" || cmd == "tempban" || cmd == "ipban" ||
                          cmd == "ban" || cmd == "ban-ip")
+                    exempt_perm = "primebds.exempt.ban";
+
+                if (!exempt_perm.empty())
                 {
+                    bool is_exempt = false;
                     auto *tp = plugin.getServer().getPlayer(target->name);
                     if (tp)
-                        is_exempt = pm.checkPermission(*tp, "primebds.exempt.ban", target->internal_rank);
-                }
+                    {
+                        is_exempt = tp->hasPermission(exempt_perm);
+                    }
+                    else
+                    {
+                        // Offline: check rank permissions directly
+                        auto &pm = permissions::PermissionManager::instance();
+                        auto rank_perms = pm.getRankPermissions(target->internal_rank);
+                        auto it = rank_perms.find(exempt_perm);
+                        is_exempt = (it != rank_perms.end() && it->second);
+                    }
 
-                if (is_exempt)
-                {
-                    player.sendMessage("\u00a76Player \u00a7e" + target->name +
-                                       " \u00a76is exempt from \u00a7e" + cmd);
-                    event.setCancelled(true);
-                    return;
+                    if (is_exempt)
+                    {
+                        player.sendMessage("\u00a76Player \u00a7e" + target->name +
+                                           " \u00a76is exempt from \u00a7e" + cmd);
+                        event.setCancelled(true);
+                        return;
+                    }
                 }
             }
         }
@@ -195,15 +196,11 @@ namespace primebds::handlers::preprocesses
                     continue;
 
                 auto target = plugin.db->getOnlineUser(target_player->getXuid());
-                if (target.has_value())
+                if (target.has_value() && target_player->hasPermission("primebds.exempt.kick"))
                 {
-                    auto &pm = permissions::PermissionManager::instance();
-                    if (pm.checkPermission(*target_player, "primebds.exempt.kick", target->internal_rank))
-                    {
-                        player.sendMessage("\u00a76Player \u00a7e" + target->name +
-                                           " \u00a76is exempt from \u00a7ekick");
-                        continue;
-                    }
+                    player.sendMessage("\u00a76Player \u00a7e" + target->name +
+                                       " \u00a76is exempt from \u00a7ekick");
+                    continue;
                 }
                 target_player->kick(reason);
                 player.sendMessage("\u00a76Player \u00a7e" + target_player->getName() +
