@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+    steps:
+      - name: Install build tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update -y -q
+          apt-get install -y -q git lsb-release wget software-properties-common gnupg cmake ninja-build
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          ./llvm.sh 18
+          apt-get install -y -q libc++-18-dev libc++abi-18-dev
+          rm -f llvm.sh
+
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Configure
+        env:
+          CC: clang-18
+          CXX: clang++-18
+        run: cmake -S . -B build/linux -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build
+        run: cmake --build build/linux --parallel $(nproc)
+
+      - name: Verify GLIBC compatibility
+        run: |
+          MAX_GLIBC=$(objdump -T build/linux/output/*.so | grep -oP 'GLIBC_\K[0-9.]+' | sort -V -u | tail -1)
+          echo "Max GLIBC requirement: GLIBC_${MAX_GLIBC}"
+          if [ "$(printf '%s\n' '2.35' "$MAX_GLIBC" | sort -V | tail -1)" != '2.35' ]; then
+            echo "::error::Binary requires GLIBC_${MAX_GLIBC} (> 2.35). Will fail on older hosting environments."
+            exit 1
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: primebds-linux
+          path: build/linux/output/
+
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86_64
+
+      - name: Set up CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Configure
+        run: cmake -S . -B build/windows -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/windows
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: primebds-windows
+          path: build/windows/output/
+
+  release:
+    needs: [ build-linux, build-windows ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: primebds-linux
+          path: artifacts/linux
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: primebds-windows
+          path: artifacts/windows
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: PrimeBDS ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            artifacts/linux/*.so
+            artifacts/windows/*.dll
