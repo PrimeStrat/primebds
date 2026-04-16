@@ -6,8 +6,25 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete previous workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 0
+          delete_workflow_pattern: build.yml
+
   build-linux:
+    needs: cleanup
     runs-on: ubuntu-latest
     container:
       image: ubuntu:22.04
