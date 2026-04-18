@@ -13,7 +13,7 @@ namespace primebds::commands {
                         const std::vector<std::string> &);
 
     REGISTER_COMMAND(updatepacks, "Update resource or behavior pack versions!", cmd_updatepacks,
-                     info.usages = {"/updatepacks <resource|behavior> [version: string]"};
+                     info.usages = {"/updatepacks (resource|behavior)<type: pack_type> [version: string]"};
                      info.permissions = {"primebds.command.updatepacks"};);
 
     /// Update resource or behavior pack versions!

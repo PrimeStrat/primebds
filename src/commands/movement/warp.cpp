@@ -16,7 +16,7 @@ namespace primebds::commands {
                      info.usages = {
                          "/warp",
                          "/warp <name: message>",
-                         "/warp (list)"};
+                         "/warp (list)<action: warp_action> [page: int]"};
                      info.permissions = {"primebds.command.warp"};);
 
     static std::map<std::string, double> warp_cooldowns;

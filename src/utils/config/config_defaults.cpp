@@ -9,7 +9,7 @@ namespace primebds::config {
         return {
             {"afk", {{"enabled", true}, {"timeout", 300}, {"kick_afk", false}, {"kick_timeout", 600}, {"message", "§7{player} is now AFK."}, {"return_message", "§7{player} is no longer AFK."}}},
             {"back", {{"enabled", true}, {"delay", 0}, {"cooldown", 0}}},
-            {"broadcast", {{"enabled", true}, {"prefix", "§8[§cBroadcast§8]§r "}}},
+            {"broadcast", {{"enabled", true}, {"prefix", "§8[§cBroadcast§8]§r "}, {"playsound", "note.pling"}}},
             {"better_chat", {{"enabled", true}, {"format", "§8[§r{prefix}§8] §r{name}§8: §f{message}"}, {"chat_cooldown", 0}}},
             {"combat", {{"enabled", true}, {"hit_cooldown", 0.45}, {"custom_damage", {{"enabled", false}, {"base_damage", 1.0}, {"critical_multiplier", 1.5}, {"sprint_bonus", 0.5}}}, {"custom_knockback", {{"enabled", false}, {"base_knockback_x", 1.0}, {"base_knockback_y", 0.4}, {"sprint_multiplier", 1.5}}}, {"tag_overrides", {{"enabled", false}}}}},
             {"connections", {{"custom_join_message", {{"enabled", true}, {"message", "§a+ §7{player}"}}}, {"custom_leave_message", {{"enabled", true}, {"message", "§c- §7{player}"}}}, {"motd", {{"enabled", false}, {"message", "§eWelcome, {player}!"}}}, {"alt_detection", {{"enabled", true}}}}},

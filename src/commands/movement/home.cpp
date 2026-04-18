@@ -17,11 +17,11 @@ namespace primebds::commands {
     REGISTER_COMMAND(home, "Manage and warp to homes!", cmd_home,
                      info.usages = {
                          "/home",
-                         "/home (set) [name: string]",
-                         "/home (list)",
-                         "/home (warp) <name: string>",
-                         "/home (del|delete) <name: string>",
-                         "/home (max)"};
+                         "/home (set)<action: home_action> [name: string]",
+                         "/home (list)<action: home_action> [page: int]",
+                         "/home (warp)<action: home_action> <name: string>",
+                         "/home (del|delete)<action: home_action> <name: string>",
+                         "/home (max)<action: home_action> [limit: int]"};
                      info.permissions = {"primebds.command.home"};);
 
     static std::map<std::string, double> home_cooldowns;

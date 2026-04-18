@@ -16,8 +16,8 @@ namespace primebds::commands {
     REGISTER_COMMAND(speed, "Modifies player flyspeed or walkspeed!", cmd_speed,
                      info.usages = {
                          "/speed <value: float>",
-                         "/speed (flyspeed|walkspeed) <value: float> [player: player]",
-                         "/speed (reset) (flyspeed|walkspeed) [player: player]"};
+                         "/speed (flyspeed|walkspeed)<mode: speed_mode> <value: float> [player: player]",
+                         "/speed (reset)<action: speed_action> <type: string> [player: player]"};
                      info.permissions = {"primebds.command.speed"};);
 
     /// Modifies player flyspeed or walkspeed!

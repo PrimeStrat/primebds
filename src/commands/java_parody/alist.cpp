@@ -19,10 +19,10 @@ namespace primebds::commands {
 
     REGISTER_COMMAND(alist, "Manages server allowlist profiles and server allowlist!", cmd_alist,
                      info.usages = {
-                         "/alist (list|check|profiles)",
-                         "/alist (add|remove) <player: string> [ignore_max_player_limit: bool]",
-                         "/alist (create|use|delete|clear) <name: string>",
-                         "/alist (inherit) <child: string> <parent: string>"};
+                         "/alist (list|check|profiles)<action: alist_action> [args: message]",
+                         "/alist (add|remove)<action: alist_action> <player: string> [ignore_max_player_limit: bool]",
+                         "/alist (create|use|delete|clear)<action: alist_action> <name: string>",
+                         "/alist (inherit)<action: alist_action> <child: string> <parent: string>"};
                      info.permissions = {"primebds.command.alist"}; info.aliases = {"wlist"};);
 
     /// Gets the path to the active allowlist.json in the BDS server root

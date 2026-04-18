@@ -237,18 +237,30 @@ namespace primebds::handlers::preprocesses {
             return;
         }
 
-        // Op → rank set operator
+        // Op → rank set operator + BDS op
         if (cmd == "op" && args.size() > 1) {
-            (void)plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
-                                                     "rank set \"" + args[1] + "\" operator");
+            auto *reg = CommandRegistry::instance().find("rank");
+            if (reg) {
+                std::vector<std::string> rank_args = {"set", args[1], "operator"};
+                reg->handler(plugin, player, rank_args);
+            }
+            auto *target = plugin.getServer().getPlayer(args[1]);
+            if (target)
+                target->setOp(true);
             event.setCancelled(true);
             return;
         }
 
-        // Deop → rank set default
+        // Deop → rank set default + BDS deop
         if (cmd == "deop" && args.size() > 1) {
-            (void)plugin.getServer().dispatchCommand(plugin.getServer().getCommandSender(),
-                                                     "rank set \"" + args[1] + "\" default");
+            auto *reg = CommandRegistry::instance().find("rank");
+            if (reg) {
+                std::vector<std::string> rank_args = {"set", args[1], "default"};
+                reg->handler(plugin, player, rank_args);
+            }
+            auto *target = plugin.getServer().getPlayer(args[1]);
+            if (target)
+                target->setOp(false);
             event.setCancelled(true);
             return;
         }
@@ -375,12 +387,26 @@ namespace primebds::handlers::preprocesses {
             return;
         }
         if (cmd == "op" && args.size() > 1) {
-            (void)server.dispatchCommand(sender, "rank set \"" + args[1] + "\" operator");
+            auto *reg = CommandRegistry::instance().find("rank");
+            if (reg) {
+                std::vector<std::string> rank_args = {"set", args[1], "operator"};
+                reg->handler(plugin, sender, rank_args);
+            }
+            auto *target = server.getPlayer(args[1]);
+            if (target)
+                target->setOp(true);
             event.setCancelled(true);
             return;
         }
         if (cmd == "deop" && args.size() > 1) {
-            (void)server.dispatchCommand(sender, "rank set \"" + args[1] + "\" default");
+            auto *reg = CommandRegistry::instance().find("rank");
+            if (reg) {
+                std::vector<std::string> rank_args = {"set", args[1], "default"};
+                reg->handler(plugin, sender, rank_args);
+            }
+            auto *target = server.getPlayer(args[1]);
+            if (target)
+                target->setOp(false);
             event.setCancelled(true);
             return;
         }

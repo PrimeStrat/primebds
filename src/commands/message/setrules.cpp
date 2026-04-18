@@ -14,11 +14,11 @@ namespace primebds::commands {
 
     REGISTER_COMMAND(setrules, "Manages the server rules list!", cmd_setrules,
                      info.usages = {
-                         "/setrules (add) <text: message>",
-                         "/setrules (edit) <index: int> <text: message>",
-                         "/setrules (delete) <index: int>",
-                         "/setrules (insert) <index: int> <text: message>",
-                         "/setrules (list)"};
+                         "/setrules (add)<action: rules_action> <text: message>",
+                         "/setrules (edit)<action: rules_action> <index: int> <text: message>",
+                         "/setrules (delete)<action: rules_action> <index: int>",
+                         "/setrules (insert)<action: rules_action> <index: int> <text: message>",
+                         "/setrules (list)<action: rules_action> [page: int]"};
                      info.permissions = {"primebds.command.setrules"};);
 
     /// Manages the server rules list!

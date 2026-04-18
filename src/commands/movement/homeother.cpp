@@ -15,11 +15,11 @@ namespace primebds::commands {
     REGISTER_COMMAND(homeother, "Manage another player's homes!", cmd_homeother,
                      info.usages = {
                          "/homeother <player: player>",
-                         "/homeother <player: player> (list)",
-                         "/homeother <player: player> (warp) <name: string>",
-                         "/homeother <player: player> (set) [name: string]",
-                         "/homeother <player: player> (del) <name: string>",
-                         "/homeother <player: player> (max)"};
+                         "/homeother <player: player> (list)<action: homeother_action> [page: int]",
+                         "/homeother <player: player> (warp)<action: homeother_action> <name: string>",
+                         "/homeother <player: player> (set)<action: homeother_action> [name: string]",
+                         "/homeother <player: player> (del)<action: homeother_action> <name: string>",
+                         "/homeother <player: player> (max)<action: homeother_action> [limit: int]"};
                      info.permissions = {"primebds.command.homeother"};);
 
     static std::map<std::string, double> homeother_cooldowns;

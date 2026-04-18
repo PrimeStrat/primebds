@@ -18,7 +18,7 @@ namespace primebds::commands {
     REGISTER_COMMAND(warnings, "List or delete warnings for a player!", cmd_warnings,
                      info.usages = {
                          "/warnings <player: player> [page: int]",
-                         "/warnings <player: player> (delete|clear) [id: int]"};
+                         "/warnings <player: player> (delete|clear)<action: warn_action> <id: int>"};
                      info.permissions = {"primebds.command.warnings"};);
 
     /// List or delete warnings for a player!

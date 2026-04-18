@@ -17,8 +17,8 @@ namespace primebds::commands {
 
     REGISTER_COMMAND(bossbar, "Sets or clears a client-sided bossbar display!", cmd_bossbar,
                      info.usages = {
-                         "/bossbar <player: player> (red|blue|green|yellow|pink|purple|rebecca_purple|white) <percent: float> <title: message>",
-                         "/bossbar <player: player> (clear)"};
+                         "/bossbar <player: player> (red|blue|green|yellow|pink|purple|rebecca_purple|white)<color: bar_color> <percent: float> <title: message>",
+                         "/bossbar <player: player> (clear)<action: bar_action>"};
                      info.permissions = {"primebds.command.bossbar"};);
 
     // Cache of active bossbars per player (by name)

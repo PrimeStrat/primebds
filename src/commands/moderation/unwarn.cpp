@@ -15,7 +15,7 @@ namespace primebds::commands {
 
     REGISTER_COMMAND(unwarn, "Remove a warning or clear all warnings from a player!", cmd_unwarn,
                      info.usages = {
-                         "/unwarn <player: player> (clear)",
+                         "/unwarn <player: player> (clear)<action: unwarn_action> [args: message]",
                          "/unwarn <player: player> [id: int]"};
                      info.permissions = {"primebds.command.unwarn"};);
 

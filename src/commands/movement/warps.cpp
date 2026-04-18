@@ -14,11 +14,11 @@ namespace primebds::commands {
     REGISTER_COMMAND(warps, "Manage server warps!", cmd_warps,
                      info.usages = {
                          "/warps",
-                         "/warps (list)",
-                         "/warps (create) <name: string> [displayname: string] [category: string] [description: string]",
-                         "/warps (delete) <name: message>",
-                         "/warps (addalias) <name: string> <alias: message>",
-                         "/warps (removealias) <name: string> <alias: message>"};
+                         "/warps (list)<action: warps_action> [page: int]",
+                         "/warps (create)<action: warps_action> <name: string> [displayname: string] [category: string] [description: string]",
+                         "/warps (delete)<action: warps_action> <name: message>",
+                         "/warps (addalias)<action: warps_action> <name: string> <alias: message>",
+                         "/warps (removealias)<action: warps_action> <name: string> <alias: message>"};
                      info.permissions = {"primebds.command.warps"};);
 
     /// Manage server warps!

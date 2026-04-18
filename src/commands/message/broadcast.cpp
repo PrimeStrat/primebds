@@ -25,7 +25,7 @@ namespace primebds::commands {
 
         auto &cfg = config::ConfigManager::instance().config();
         std::string prefix = cfg["modules"]["broadcast"].value("prefix", "\u00a76[\u00a7eBroadcast\u00a76]\u00a7r ");
-        bool playsound = cfg["modules"]["broadcast"].value("playsound", true);
+        std::string playsound = cfg["modules"]["broadcast"].value("playsound", std::string("note.pling"));
 
         std::string msg;
         for (size_t i = 0; i < args.size(); ++i) {
@@ -35,9 +35,9 @@ namespace primebds::commands {
         }
 
         plugin.getServer().broadcastMessage(prefix + msg);
-        if (playsound) {
+        if (!playsound.empty()) {
             for (auto *p : plugin.getServer().getOnlinePlayers()) {
-                p->performCommand("playsound note.pling @s");
+                p->playSound(p->getLocation(), playsound, 0, 0);
             }
         }
         return true;

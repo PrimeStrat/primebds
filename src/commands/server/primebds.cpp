@@ -19,9 +19,8 @@ namespace primebds::commands {
     REGISTER_COMMAND(primebds, "PrimeBDS management command!", cmd_primebds,
                      info.usages = {
                          "/primebds",
-                         "/primebds (info)",
-                         "/primebds (reloadconfig)",
-                         "/primebds (config) <key.path: message> [value: message]"};
+                         "/primebds (info|reloadconfig)<action: pbds_action> [args: message]",
+                         "/primebds (config)<action: pbds_action> <keypath: string> [value: message]"};
                      info.permissions = {"primebds.command.primebds"};);
 
     namespace {
@@ -53,7 +52,6 @@ namespace primebds::commands {
             (*node)[segments.back()] = value;
         }
 
-        /// Capitalize a snake_case key into a display label.
         std::string formatLabel(const std::string &key) {
             std::string out;
             bool cap = true;
@@ -70,13 +68,96 @@ namespace primebds::commands {
         }
 
         // ---------------------------------------------------------------
-        // Form-based config editor (mirrors Python's open_config_categories)
+        // Form-based config editor
         // ---------------------------------------------------------------
 
-        /// Open a ModalForm to edit primitive (non-object) values in a JSON object.
-        void openPrimitiveEditor(endstone::Player &player, const std::string &title,
-                                 nlohmann::json &section, const std::string &json_path) {
-            // Collect primitive keys
+        // Forward declarations
+        void openConfigCategories(PrimeBDS &plugin, endstone::Player &player);
+
+        /// Apply form submissions to a JSON section and save config.
+        void applyFormValues(const std::vector<std::string> &keys, nlohmann::json &section,
+                             const std::vector<std::variant<int, float, std::string, bool>> &values) {
+            for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
+                auto &val = section[keys[i]];
+                auto &submitted = values[i];
+                if (val.is_boolean()) {
+                    if (auto *b = std::get_if<bool>(&submitted))
+                        val = *b;
+                } else if (val.is_number_integer()) {
+                    if (auto *s = std::get_if<std::string>(&submitted)) {
+                        try { val = std::stoi(*s); } catch (...) {}
+                    } else if (auto *iv = std::get_if<int>(&submitted))
+                        val = *iv;
+                } else if (val.is_number_float()) {
+                    if (auto *s = std::get_if<std::string>(&submitted)) {
+                        try { val = std::stod(*s); } catch (...) {}
+                    } else if (auto *fv = std::get_if<float>(&submitted))
+                        val = *fv;
+                } else if (val.is_string()) {
+                    if (auto *s = std::get_if<std::string>(&submitted))
+                        val = *s;
+                } else if (val.is_array()) {
+                    if (auto *s = std::get_if<std::string>(&submitted)) {
+                        try { val = nlohmann::json::parse(*s); } catch (...) {}
+                    }
+                }
+            }
+        }
+
+        /// Open a ModalForm to edit primitive values at modules.<module_key>.<sub_key>.
+        void openSubSectionEditor(PrimeBDS &plugin, endstone::Player &player,
+                                  const std::string &title, const std::string &module_key,
+                                  const std::string &sub_key) {
+            auto &cfg = config::ConfigManager::instance();
+            auto &conf = cfg.config();
+            if (!conf.contains("modules") || !conf["modules"].contains(module_key) ||
+                !conf["modules"][module_key].contains(sub_key))
+                return;
+            auto &section = conf["modules"][module_key][sub_key];
+
+            std::vector<std::string> keys;
+            for (auto &[k, v] : section.items()) {
+                if (!v.is_object())
+                    keys.push_back(k);
+            }
+            if (keys.empty()) {
+                player.sendMessage("\u00a7cNo editable values in " + title);
+                return;
+            }
+
+            utils::ModalFormBuilder form;
+            form.title(title);
+            for (auto &key : keys) {
+                auto &val = section[key];
+                if (val.is_boolean())
+                    form.toggle(formatLabel(key), val.get<bool>());
+                else
+                    form.textInput(formatLabel(key), val.dump(), val.dump());
+            }
+
+            auto player_name = player.getName();
+            form.show(player, [keys, module_key, sub_key, player_name, &plugin](auto result) {
+                if (!result.has_value())
+                    return;
+                auto &cfg = config::ConfigManager::instance();
+                auto &section = cfg.config()["modules"][module_key][sub_key];
+                applyFormValues(keys, section, result.value());
+                cfg.save();
+                auto *p = plugin.getServer().getPlayer(player_name);
+                if (p)
+                    p->sendMessage("\u00a7aConfig saved!");
+            });
+        }
+
+        /// Open a ModalForm to edit primitive values at modules.<module_key>.
+        void openPrimitiveEditor(PrimeBDS &plugin, endstone::Player &player,
+                                 const std::string &title, const std::string &module_key) {
+            auto &cfg = config::ConfigManager::instance();
+            auto &conf = cfg.config();
+            if (!conf.contains("modules") || !conf["modules"].contains(module_key))
+                return;
+            auto &section = conf["modules"][module_key];
+
             std::vector<std::string> keys;
             for (auto &[k, v] : section.items()) {
                 if (!v.is_object())
@@ -89,7 +170,6 @@ namespace primebds::commands {
 
             utils::ModalFormBuilder form;
             form.title(title + " Configuration");
-
             for (auto &key : keys) {
                 auto &val = section[key];
                 if (val.is_boolean())
@@ -98,46 +178,29 @@ namespace primebds::commands {
                     form.textInput(formatLabel(key), val.dump(), val.dump());
             }
 
-            form.show(player, [keys, json_path, &section](auto result) {
+            auto player_name = player.getName();
+            form.show(player, [keys, module_key, player_name, &plugin](auto result) {
                 if (!result.has_value())
                     return;
-                auto &values = result.value();
                 auto &cfg = config::ConfigManager::instance();
-                for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
-                    auto &val = section[keys[i]];
-                    auto &submitted = values[i];
-                    if (val.is_boolean()) {
-                        if (auto *b = std::get_if<bool>(&submitted))
-                            val = *b;
-                    } else if (val.is_number_integer()) {
-                        if (auto *s = std::get_if<std::string>(&submitted)) {
-                            try { val = std::stoi(*s); } catch (...) {}
-                        } else if (auto *iv = std::get_if<int>(&submitted))
-                            val = *iv;
-                    } else if (val.is_number_float()) {
-                        if (auto *s = std::get_if<std::string>(&submitted)) {
-                            try { val = std::stod(*s); } catch (...) {}
-                        } else if (auto *fv = std::get_if<float>(&submitted))
-                            val = *fv;
-                    } else if (val.is_string()) {
-                        if (auto *s = std::get_if<std::string>(&submitted))
-                            val = *s;
-                    } else if (val.is_array()) {
-                        if (auto *s = std::get_if<std::string>(&submitted)) {
-                            try { val = nlohmann::json::parse(*s); } catch (...) {}
-                        }
-                    }
-                }
-                cfg.save(); });
+                auto &section = cfg.config()["modules"][module_key];
+                applyFormValues(keys, section, result.value());
+                cfg.save();
+                auto *p = plugin.getServer().getPlayer(player_name);
+                if (p)
+                    p->sendMessage("\u00a7aConfig saved!");
+            });
         }
 
-        /// Open an ActionForm showing sub-categories (object children).
-        void openModuleEditor(endstone::Player &player, const std::string &module_name,
-                              nlohmann::json &section, const std::string &json_path);
+        /// Open an ActionForm showing sub-categories within a module.
+        void openModuleEditor(PrimeBDS &plugin, endstone::Player &player,
+                              const std::string &module_name) {
+            auto &cfg = config::ConfigManager::instance();
+            auto &conf = cfg.config();
+            if (!conf.contains("modules") || !conf["modules"].contains(module_name))
+                return;
+            auto &section = conf["modules"][module_name];
 
-        void openModuleEditor(endstone::Player &player, const std::string &module_name,
-                              nlohmann::json &section, const std::string &json_path) {
-            // Split into sub-objects and primitives
             std::vector<std::string> sub_keys;
             bool has_primitives = false;
             for (auto &[k, v] : section.items()) {
@@ -147,33 +210,74 @@ namespace primebds::commands {
                     has_primitives = true;
             }
 
-            // If no sub-objects, just open the primitive editor directly
             if (sub_keys.empty()) {
-                openPrimitiveEditor(player, formatLabel(module_name), section, json_path);
+                openPrimitiveEditor(plugin, player, formatLabel(module_name), module_name);
                 return;
             }
 
             utils::ActionFormBuilder form;
             form.title(formatLabel(module_name));
             form.body("Select a subcategory to edit:");
-
             if (has_primitives)
                 form.button("\u00a74Settings");
-
             for (auto &sub : sub_keys)
                 form.button("\u00a74" + formatLabel(sub));
 
-            form.show(player, [&section, sub_keys, has_primitives, module_name, json_path](auto selection) {
-                          if (!selection.has_value())
-                              return;
+            auto player_name = player.getName();
+            form.show(player, [&plugin, module_name, sub_keys, has_primitives, player_name](auto selection) {
+                if (!selection.has_value())
+                    return;
+                auto *p = plugin.getServer().getPlayer(player_name);
+                if (!p)
+                    return;
 
-                          int idx = selection.value();
-                          // Resolve which player triggered this — not available here,
-                          // but the form framework calls back on the right player.
-                          // We get the player from the form callback context.
-                          // NOTE: This is a limitation; the player ref must be captured.
-                          // For now we rely on the form's internal player tracking. });
-                      });
+                int idx = selection.value();
+                if (has_primitives && idx == 0) {
+                    openPrimitiveEditor(plugin, *p, formatLabel(module_name), module_name);
+                    return;
+                }
+                int sub_idx = has_primitives ? idx - 1 : idx;
+                if (sub_idx < 0 || sub_idx >= static_cast<int>(sub_keys.size()))
+                    return;
+                openSubSectionEditor(plugin, *p,
+                                     formatLabel(module_name) + " > " + formatLabel(sub_keys[sub_idx]),
+                                     module_name, sub_keys[sub_idx]);
+            });
+        }
+
+        /// Open a ModalForm to toggle commands on/off.
+        void openCommandEditor(PrimeBDS &plugin, endstone::Player &player) {
+            auto &cfg = config::ConfigManager::instance();
+            auto cmd_config = cfg.loadCommandConfig();
+
+            std::vector<std::string> cmd_names;
+            for (auto &[name, _] : cmd_config.items())
+                cmd_names.push_back(name);
+            std::sort(cmd_names.begin(), cmd_names.end());
+
+            utils::ModalFormBuilder form;
+            form.title("Commands Configuration");
+            for (auto &cmd : cmd_names) {
+                bool enabled = cmd_config[cmd].value("enabled", true);
+                form.toggle("/" + cmd, enabled);
+            }
+
+            auto player_name = player.getName();
+            form.show(player, [cmd_names, player_name, &plugin](auto result) {
+                if (!result.has_value())
+                    return;
+                auto &values = result.value();
+                auto &cfg = config::ConfigManager::instance();
+                auto cmd_config = cfg.loadCommandConfig();
+                for (size_t i = 0; i < cmd_names.size() && i < values.size(); ++i) {
+                    if (auto *b = std::get_if<bool>(&values[i]))
+                        cmd_config[cmd_names[i]]["enabled"] = *b;
+                }
+                cfg.saveCommandConfig(cmd_config);
+                auto *p = plugin.getServer().getPlayer(player_name);
+                if (p)
+                    p->sendMessage("\u00a7aCommand config saved!");
+            });
         }
 
         /// Open the top-level config categories form.
@@ -190,71 +294,47 @@ namespace primebds::commands {
                 for (auto &[k, v] : conf["modules"].items())
                     categories.push_back(k);
             }
-            // Sort alphabetically
             std::sort(categories.begin(), categories.end());
-
             categories.push_back("commands");
 
             for (auto &cat : categories)
                 form.button("\u00a74" + formatLabel(cat));
-
             form.button("Close");
 
-            form.show(player, [&plugin, categories](auto selection) {
+            auto player_name = player.getName();
+            form.show(player, [&plugin, categories, player_name](auto selection) {
                 if (!selection.has_value())
+                    return;
+                auto *p = plugin.getServer().getPlayer(player_name);
+                if (!p)
                     return;
 
                 int idx = selection.value();
                 if (idx < 0 || idx >= static_cast<int>(categories.size()))
-                    return; // "Close" or out of range
-
-                auto &cfg = config::ConfigManager::instance();
-                std::string chosen = categories[idx];
-
-                if (chosen == "commands") {
-                    // Open command enable/disable editor
-                    auto cmd_config = cfg.loadCommandConfig();
-                    std::vector<std::string> cmd_names;
-                    for (auto &[name, _] : cmd_config.items())
-                        cmd_names.push_back(name);
-                    std::sort(cmd_names.begin(), cmd_names.end());
-
-                    // We need a player to show the form to — get from server
-                    // This callback doesn't carry the player reference, so we
-                    // rely on the form callback pattern. For simplicity, we
-                    // log a message that commands should be toggled via
-                    // /primebds config commands.json or the command editor.
                     return;
-                }
 
-                auto &conf = cfg.config();
-                if (conf.contains("modules") && conf["modules"].contains(chosen)) {
-                    auto &section = conf["modules"][chosen];
-                    // Check if it has sub-objects
-                    bool has_subobj = false;
-                    bool has_prim = false;
-                    for (auto &[k, v] : section.items()) {
-                        if (v.is_object())
-                            has_subobj = true;
-                        else
-                            has_prim = true;
-                    }
-
-                    if (has_prim && !has_subobj) {
-                        // Directly open primitive editor — but we need the player.
-                        // This is a limitation of the current callback pattern.
-                    }
-                } });
+                std::string chosen = categories[idx];
+                if (chosen == "commands")
+                    openCommandEditor(plugin, *p);
+                else
+                    openModuleEditor(plugin, *p, chosen);
+            });
         }
 
     } // anonymous namespace
 
-    /// PrimeBDS management command!
+    /// PrimeBDS management command handler.
     static bool cmd_primebds(PrimeBDS &plugin, endstone::CommandSender &sender,
                              const std::vector<std::string> &args) {
+        auto *player = sender.asPlayer();
+
         if (args.empty()) {
-            sender.sendMessage("\u00a7b--- PrimeBDS v3.4.0 ---");
-            sender.sendMessage("\u00a77Use /primebds <config|reloadconfig|info> for more options");
+            if (player && player->isOp()) {
+                openConfigCategories(plugin, *player);
+            } else {
+                sender.sendMessage("\u00a7dPrimeBDS v3.4.1");
+                sender.sendMessage("\u00a77Use /primebds <config|reloadconfig|info> for more options");
+            }
             return true;
         }
 
@@ -263,50 +343,52 @@ namespace primebds::commands {
             c = (char)std::tolower(c);
 
         if (sub == "info") {
-            sender.sendMessage("\u00a7b--- PrimeBDS Info ---");
-            sender.sendMessage("\u00a77Version: \u00a7e3.4.0");
-            sender.sendMessage("\u00a77Platform: \u00a7eC++ / Endstone");
+            sender.sendMessage("\u00a7dPrimeBDS");
+            sender.sendMessage("\u00a7dAn all-in-one essentials plugin for Minecraft Bedrock Edition.");
+            sender.sendMessage("");
+            sender.sendMessage("\u00a7dIf this plugin has helped you, consider leaving a star:");
+            sender.sendMessage("\u00a7e@ https://github.com/PrimeStrat/primebds");
+            sender.sendMessage("");
+            sender.sendMessage("\u00a7dConfused on how something works?");
+            sender.sendMessage("\u00a7dVisit the wiki:");
+            sender.sendMessage("\u00a7e@ https://github.com/PrimeStrat/primebds/wiki");
             return true;
         }
 
         if (sub == "reloadconfig") {
-            if (!sender.hasPermission("primebds.command.primebds.reloadconfig")) {
-                sender.sendMessage("\u00a7cYou don't have permission to reload config");
-                return false;
-            }
             config::ConfigManager::instance().reload();
-            sender.sendMessage("\u00a7aConfig reloaded!");
+            sender.sendMessage("\u00a7dPrimeBDS config reloaded!");
             return true;
         }
 
         if (sub == "config") {
-            if (!sender.hasPermission("primebds.command.primebds.config")) {
-                sender.sendMessage("\u00a7cYou don't have permission to modify config");
+            if (!player) {
+                sender.sendMessage("\u00a7cThis subcommand can only be used by a player");
+                return false;
+            }
+            if (!player->isOp()) {
+                sender.sendMessage("\u00a7cOnly operators can modify the server config");
                 return false;
             }
 
             if (args.size() < 2) {
-                sender.sendMessage("\u00a7cUsage: /primebds config <key.path> [value]");
-                sender.sendMessage("\u00a77Example: /primebds config modules.afk.enabled false");
-                return false;
+                openConfigCategories(plugin, *player);
+                return true;
             }
 
             std::string key = args[1];
 
             if (args.size() == 2) {
-                // Get value
                 auto &cfg = config::ConfigManager::instance();
                 auto &conf = cfg.config();
                 auto *val = resolveJsonPath(conf, key);
-                if (!val) {
+                if (!val)
                     sender.sendMessage("\u00a7cConfig key \u00a7e" + key + " \u00a7cnot found");
-                } else {
+                else
                     sender.sendMessage("\u00a7e" + key + " \u00a7a= \u00a7e" + val->dump());
-                }
                 return true;
             }
 
-            // Set value
             std::string value;
             for (size_t i = 2; i < args.size(); ++i) {
                 if (i > 2)
@@ -314,7 +396,6 @@ namespace primebds::commands {
                 value += args[i];
             }
 
-            // Try to parse as JSON, fallback to string
             nlohmann::json jval;
             try {
                 jval = nlohmann::json::parse(value);
@@ -332,6 +413,5 @@ namespace primebds::commands {
         sender.sendMessage("\u00a7cUnknown subcommand. Use /primebds [config|reloadconfig|info]");
         return false;
     }
-
 
 } // namespace primebds::commands

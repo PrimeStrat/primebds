@@ -13,10 +13,10 @@ namespace primebds::commands {
 
     REGISTER_COMMAND(note, "Add, remove, clear, or list notes on a player!", cmd_note,
                      info.usages = {
-                         "/note <player: player> (add) <text: message>",
-                         "/note <player: player> (remove) <id: int>",
-                         "/note <player: player> (clear)",
-                         "/note <player: player> (list) [page: int]"};
+                         "/note <player: player> (add)<action: note_action> <text: message>",
+                         "/note <player: player> (remove)<action: note_action> <id: int>",
+                         "/note <player: player> (clear)<action: note_action> [args: message]",
+                         "/note <player: player> (list)<action: note_action> [page: int]"};
                      info.permissions = {"primebds.command.note"};);
 
     /// Add, remove, clear, or list notes on a player!

@@ -12,7 +12,7 @@ namespace primebds::commands {
                         const std::vector<std::string> &);
 
     REGISTER_COMMAND(send, "Send players to another server!", cmd_send,
-                     info.usages = {"/send <player: player> <ip:port: message>"};
+                     info.usages = {"/send <player: player> <address: message>"};
                      info.permissions = {"primebds.command.send"};);
 
     /// Send players to another server!

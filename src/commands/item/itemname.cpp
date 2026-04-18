@@ -3,6 +3,7 @@
 
 #include "primebds/commands/command_registry.h"
 #include "primebds/plugin.h"
+#include "primebds/utils/item_slot.h"
 #include "primebds/utils/target_selector.h"
 
 #include <algorithm>
@@ -14,7 +15,9 @@ namespace primebds::commands {
                         const std::vector<std::string> &);
 
     REGISTER_COMMAND(itemname, "Modify item name data!", cmd_itemname,
-                     info.usages = {"/itemname <player: player> (set|clear) [name: string]"};
+                     info.usages = {
+                         "/itemname <player: player> (set)<action: name_action> <item_name: string> (slot|helmet|chestplate|leggings|boots|mainhand|offhand)[slotType: slotType] [slot: int]",
+                         "/itemname <player: player> (clear)<action: name_action> (slot|helmet|chestplate|leggings|boots|mainhand|offhand)[slotType: slotType] [slot: int]"};
                      info.permissions = {"primebds.command.itemname"};);
 
     /// Modify item name data!
@@ -34,12 +37,19 @@ namespace primebds::commands {
         std::transform(action.begin(), action.end(), action.begin(), ::tolower);
         std::string name = (args.size() > 2) ? args[2] : "";
 
+        size_t slot_offset = (action == "clear") ? 2 : 3;
+        auto slot = utils::parseSlotArgs(args, slot_offset);
+        if (!slot.type.empty() && !utils::isValidSlotType(slot.type)) {
+            sender.sendMessage("\u00a7cUnknown slot type '" + slot.type + "'");
+            return false;
+        }
+
         for (auto *t : targets) {
             auto *p = dynamic_cast<endstone::Player *>(t);
             if (!p)
                 continue;
-            auto held = p->getInventory().getItemInMainHand();
-            if (!held || held->getType() == endstone::ItemType::Air)
+            auto held = utils::getItemFromSlot(p->getInventory(), slot);
+            if (!held)
                 continue;
             auto meta = held->getItemMeta();
             if (action == "set" && !name.empty())
@@ -52,10 +62,13 @@ namespace primebds::commands {
                 return false;
             }
             held->setItemMeta(meta.get());
-            p->getInventory().setItem(p->getInventory().getHeldItemSlot(), *held);
+            utils::setItemToSlot(p->getInventory(), slot, *held);
         }
 
-        sender.sendMessage("\u00a7e" + std::to_string(targets.size()) + " \u00a7rplayers' item names were updated");
+        if (targets.size() == 1)
+            sender.sendMessage("\u00a7e" + targets[0]->getName() + "\u00a7r's item name was updated");
+        else
+            sender.sendMessage("\u00a7e" + std::to_string(targets.size()) + " \u00a7rplayers' item names were updated");
         return true;
     }
 

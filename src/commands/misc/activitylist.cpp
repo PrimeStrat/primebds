@@ -13,7 +13,7 @@ namespace primebds::commands {
                         const std::vector<std::string> &);
 
     REGISTER_COMMAND(activitylist, "Lists players by activity filter!", cmd_activitylist,
-                     info.usages = {"/activitylist [page: int] (highest|lowest|recent)"};
+                     info.usages = {"/activitylist (highest|lowest|recent)<filter: activity_filter> [page: int]"};
                      info.permissions = {"primebds.command.activitylist"};);
 
     static std::string fmtPlaytime(int64_t sec) {
