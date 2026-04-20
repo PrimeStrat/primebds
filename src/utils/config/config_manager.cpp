@@ -283,6 +283,22 @@ namespace primebds::config {
         writeTextFile(path, content);
     }
 
+    std::string ConfigManager::loadPlainText(const std::string &filename) {
+        auto path = (fs::path(getDataFolderPath()) / filename).string();
+        auto content = readTextFile(path);
+        // Strip a single trailing newline for convenience
+        if (!content.empty() && content.back() == '\n')
+            content.pop_back();
+        if (!content.empty() && content.back() == '\r')
+            content.pop_back();
+        return content;
+    }
+
+    void ConfigManager::savePlainText(const std::string &filename, const std::string &content) {
+        auto path = (fs::path(getDataFolderPath()) / filename).string();
+        writeTextFile(path, content);
+    }
+
     std::string ConfigManager::findServerProperties() {
         auto current = fs::current_path();
         while (true) {

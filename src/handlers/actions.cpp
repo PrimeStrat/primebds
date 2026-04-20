@@ -47,7 +47,10 @@ namespace primebds::handlers {
     }
 
     void handleInteractEvent(PrimeBDS &plugin, endstone::PlayerInteractActorEvent &event) {
-        if (!plugin.gamerules.count("can_interact") || !plugin.gamerules["can_interact"])
+        // Only cancel if the gamerule is explicitly set to false. Missing or
+        // unset gamerules must never auto-cancel the interaction.
+        auto it = plugin.gamerules.find("can_interact");
+        if (it != plugin.gamerules.end() && !it->second)
             event.setCancelled(true);
     }
 

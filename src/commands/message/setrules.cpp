@@ -30,6 +30,7 @@ namespace primebds::commands {
         }
 
         auto &cfg = config::ConfigManager::instance();
+        auto rules = cfg.loadRules();
         std::string sub = args[0];
 
         if (sub == "add") {
@@ -43,7 +44,8 @@ namespace primebds::commands {
                     text += " ";
                 text += args[i];
             }
-            // Add to rules list in config
+            rules.push_back(text);
+            cfg.saveRules(rules);
             sender.sendMessage("\u00a7aRule added: \u00a7f" + text);
             return true;
         }
@@ -54,12 +56,18 @@ namespace primebds::commands {
                 return false;
             }
             int idx = std::atoi(args[1].c_str());
+            if (idx < 1 || idx > static_cast<int>(rules.size())) {
+                sender.sendMessage("\u00a7cInvalid rule index");
+                return false;
+            }
             std::string text;
             for (size_t i = 2; i < args.size(); ++i) {
                 if (i > 2)
                     text += " ";
                 text += args[i];
             }
+            rules[idx - 1] = text;
+            cfg.saveRules(rules);
             sender.sendMessage("\u00a7aRule " + std::to_string(idx) + " updated");
             return true;
         }
@@ -70,6 +78,12 @@ namespace primebds::commands {
                 return false;
             }
             int idx = std::atoi(args[1].c_str());
+            if (idx < 1 || idx > static_cast<int>(rules.size())) {
+                sender.sendMessage("\u00a7cInvalid rule index");
+                return false;
+            }
+            rules.erase(rules.begin() + (idx - 1));
+            cfg.saveRules(rules);
             sender.sendMessage("\u00a7aRule " + std::to_string(idx) + " deleted");
             return true;
         }
@@ -80,12 +94,18 @@ namespace primebds::commands {
                 return false;
             }
             int idx = std::atoi(args[1].c_str());
+            if (idx < 1 || idx > static_cast<int>(rules.size()) + 1) {
+                sender.sendMessage("\u00a7cInvalid rule index");
+                return false;
+            }
             std::string text;
             for (size_t i = 2; i < args.size(); ++i) {
                 if (i > 2)
                     text += " ";
                 text += args[i];
             }
+            rules.insert(rules.begin() + (idx - 1), text);
+            cfg.saveRules(rules);
             sender.sendMessage("\u00a7aRule inserted at position " + std::to_string(idx));
             return true;
         }

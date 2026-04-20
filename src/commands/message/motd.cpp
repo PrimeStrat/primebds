@@ -17,6 +17,8 @@ namespace primebds::commands {
     /// Displays or sets the Message of the Day!
     static bool cmd_motd(PrimeBDS &plugin, endstone::CommandSender &sender,
                          const std::vector<std::string> &args) {
+        auto &cfg = config::ConfigManager::instance();
+
         if (!args.empty()) {
             // Set MOTD
             if (!sender.hasPermission("primebds.command.motd.set")) {
@@ -29,16 +31,14 @@ namespace primebds::commands {
                     msg += " ";
                 msg += args[i];
             }
-            auto &cfg = config::ConfigManager::instance();
-            auto &conf = cfg.config();
-            conf["modules"]["motd"]["message"] = msg;
-            cfg.save();
+            cfg.savePlainText("motd.txt", msg);
             sender.sendMessage("\u00a7aMOTD updated!");
             return true;
         }
 
-        auto &cfg = config::ConfigManager::instance().config();
-        std::string motd = cfg["modules"]["motd"].value("message", "Welcome to the server!");
+        std::string motd = cfg.loadPlainText("motd.txt");
+        if (motd.empty())
+            motd = "Welcome to the server!";
         sender.sendMessage(motd);
         return true;
     }

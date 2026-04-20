@@ -37,12 +37,25 @@ namespace primebds::handlers {
     }
 
     void handleServerLoadEvent(PrimeBDS &plugin, endstone::ServerLoadEvent &event) {
-        // Load permissions on server start/reload
-        permissions::PermissionManager::instance().loadPermissions(plugin.getServer());
+        // Wrapped in try/catch so a permission/reload failure can never propagate
+        // out of the event dispatcher (which would log "std::bad_alloc" and abort
+        // the rest of the listeners). ServerLoadEvent is not cancellable, so the
+        // worst case is permissions don't refresh on this load.
+        try {
+            permissions::PermissionManager::instance().loadPermissions(plugin.getServer());
 
-        // Reload custom permissions for all online players
-        for (auto *player : plugin.getServer().getOnlinePlayers()) {
-            plugin.reloadCustomPerms(*player);
+            for (auto *player : plugin.getServer().getOnlinePlayers()) {
+                try {
+                    plugin.reloadCustomPerms(*player);
+                } catch (const std::exception &e) {
+                    plugin.getLogger().error("Failed to reload perms for {}: {}",
+                                             player ? player->getName() : "<null>", e.what());
+                }
+            }
+        } catch (const std::exception &e) {
+            plugin.getLogger().error("ServerLoadEvent handler failed: {}", e.what());
+        } catch (...) {
+            plugin.getLogger().error("ServerLoadEvent handler failed: unknown error");
         }
     }
 

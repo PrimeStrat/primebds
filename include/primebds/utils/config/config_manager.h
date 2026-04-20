@@ -38,6 +38,10 @@ namespace primebds::config {
         std::vector<std::string> loadRules();
         void saveRules(const std::vector<std::string> &rules);
 
+        // Plain-text single-message files (no JSON escaping)
+        std::string loadPlainText(const std::string &filename);
+        void savePlainText(const std::string &filename, const std::string &content);
+
         // Server properties
         static std::string findServerProperties();
         static std::map<std::string, std::string> parsePropertiesFile(const std::string &path);
