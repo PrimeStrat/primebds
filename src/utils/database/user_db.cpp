@@ -3,6 +3,7 @@
 
 #include "primebds/utils/database/user_db.h"
 
+#include <nlohmann/json.hpp>
 #include <ctime>
 
 namespace primebds::db {
@@ -70,11 +71,6 @@ namespace primebds::db {
                                        {"reason", "TEXT"},
                                        {"timestamp", "INTEGER"},
                                        {"duration", "INTEGER"}});
-
-        createTable("permissions", {{"xuid", "TEXT"},
-                                    {"permission", "TEXT"},
-                                    {"value", "INTEGER DEFAULT 1"},
-                                    {"UNIQUE (xuid, permission)", ""}});
     }
 
     void UserDB::saveUser(const std::string &xuid, const std::string &uuid,
@@ -154,11 +150,27 @@ namespace primebds::db {
     }
 
     std::optional<User> UserDB::getUserByName(const std::string &name) {
+        // Check cache first (search by name across cached users)
+        {
+            std::lock_guard lock(cache_mutex_);
+            auto now = std::chrono::steady_clock::now();
+            for (auto &[xuid, entry] : user_cache_) {
+                if (now - entry.second >= CACHE_TTL)
+                    continue;
+                // Case-insensitive name comparison
+                const auto &cached_name = entry.first.name;
+                if (cached_name.size() == name.size() &&
+                    std::equal(cached_name.begin(), cached_name.end(), name.begin(),
+                               [](char a, char b) { return std::tolower(a) == std::tolower(b); })) {
+                    return entry.first;
+                }
+            }
+        }
+
         auto row = queryRow("SELECT * FROM users WHERE name = ? COLLATE NOCASE", {name});
         if (!row)
             return std::nullopt;
 
-        // Re-use same parsing but without cache
         User u;
         auto &r = *row;
         u.xuid = r["xuid"];
@@ -185,6 +197,12 @@ namespace primebds::db {
         u.enabled_ms = std::stoi(r["enabled_ms"]);
         u.enabled_as = std::stoi(r["enabled_as"]);
         u.enabled_sc = std::stoi(r["enabled_sc"]);
+
+        // Cache the result by xuid for subsequent lookups
+        {
+            std::lock_guard lock(cache_mutex_);
+            user_cache_[u.xuid] = {u, std::chrono::steady_clock::now()};
+        }
         return u;
     }
 
@@ -433,25 +451,55 @@ namespace primebds::db {
         return logs;
     }
 
-    // --- Permissions ---
+    // --- Permissions (stored as JSON in users.perms column, mirroring Python) ---
 
     std::map<std::string, bool> UserDB::getPermissions(const std::string &xuid) {
-        auto rows = query("SELECT permission, value FROM permissions WHERE xuid = ?", {xuid});
         std::map<std::string, bool> perms;
-        for (auto &r : rows) {
-            perms[r["permission"]] = r["value"] == "1";
+        auto user = getOnlineUser(xuid);
+        if (!user || user->perms.empty())
+            return perms;
+        try {
+            auto j = nlohmann::json::parse(user->perms);
+            if (!j.is_object())
+                return perms;
+            for (auto &[k, v] : j.items()) {
+                if (v.is_boolean())
+                    perms[k] = v.get<bool>();
+                else if (v.is_number())
+                    perms[k] = v.get<int>() != 0;
+            }
+        } catch (...) {
         }
         return perms;
     }
 
     void UserDB::setPermission(const std::string &xuid, const std::string &perm, bool value) {
-        execute(
-            "INSERT OR REPLACE INTO permissions (xuid, permission, value) VALUES (?, ?, ?)",
-            {xuid, perm, value ? "1" : "0"});
+        nlohmann::json j = nlohmann::json::object();
+        auto user = getOnlineUser(xuid);
+        if (user && !user->perms.empty()) {
+            try {
+                auto parsed = nlohmann::json::parse(user->perms);
+                if (parsed.is_object())
+                    j = parsed;
+            } catch (...) {
+            }
+        }
+        j[perm] = value;
+        updateUser(xuid, "perms", j.dump());
     }
 
     void UserDB::removePermission(const std::string &xuid, const std::string &perm) {
-        execute("DELETE FROM permissions WHERE xuid = ? AND permission = ?", {xuid, perm});
+        auto user = getOnlineUser(xuid);
+        if (!user || user->perms.empty())
+            return;
+        try {
+            auto j = nlohmann::json::parse(user->perms);
+            if (!j.is_object())
+                return;
+            j.erase(perm);
+            updateUser(xuid, "perms", j.dump());
+        } catch (...) {
+        }
     }
 
     // --- Alt detection ---
@@ -548,10 +596,24 @@ namespace primebds::db {
     }
 
     std::map<std::string, std::map<std::string, std::string>> UserDB::getAllInternalPermissions() {
-        auto rows = query("SELECT * FROM user_permissions");
+        // Per-user perms now live in users.perms JSON column (mirrors Python).
         std::map<std::string, std::map<std::string, std::string>> result;
+        auto rows = query("SELECT xuid, perms FROM users WHERE perms IS NOT NULL AND perms != ''");
         for (auto &r : rows) {
-            result[r["xuid"]][r["permission"]] = r["value"];
+            try {
+                auto j = nlohmann::json::parse(r["perms"]);
+                if (!j.is_object())
+                    continue;
+                for (auto &[k, v] : j.items()) {
+                    std::string s;
+                    if (v.is_boolean())
+                        s = v.get<bool>() ? "1" : "0";
+                    else
+                        s = v.dump();
+                    result[r["xuid"]][k] = s;
+                }
+            } catch (...) {
+            }
         }
         return result;
     }
@@ -561,10 +623,23 @@ namespace primebds::db {
     }
 
     std::map<std::string, std::string> UserDB::getInternalPermissions(const std::string &xuid) {
-        auto rows = query("SELECT permission, value FROM user_permissions WHERE xuid = ?", {xuid});
+        // Per-user perms now live in users.perms JSON column (mirrors Python).
         std::map<std::string, std::string> result;
-        for (auto &r : rows)
-            result[r["permission"]] = r["value"];
+        auto user = getOnlineUser(xuid);
+        if (!user || user->perms.empty())
+            return result;
+        try {
+            auto j = nlohmann::json::parse(user->perms);
+            if (!j.is_object())
+                return result;
+            for (auto &[k, v] : j.items()) {
+                if (v.is_boolean())
+                    result[k] = v.get<bool>() ? "1" : "0";
+                else
+                    result[k] = v.dump();
+            }
+        } catch (...) {
+        }
         return result;
     }
 

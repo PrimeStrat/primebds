@@ -15,13 +15,13 @@ namespace primebds::commands {
 
     REGISTER_COMMAND(rank, "Manage server ranks!", cmd_rank,
                      info.usages = {
-                         "/rank (set)<sub: rank_sub> <player: player> <rank: string>",
+                         "/rank (set)<sub: rank_sub> <player: string> <rank: string>",
                          "/rank (create)<sub: rank_sub> <name: string>",
                          "/rank (delete)<sub: rank_sub> <name: string>",
                          "/rank (info)<sub: rank_sub> <name: string>",
-                         "/rank (perm)<sub: rank_sub> <action: string> <rank: string> <permission: message>",
+                         "/rank (perm)<sub: rank_sub> <action: string> <rank: string> <permission: string> [state: bool]",
                          "/rank (list)<sub: rank_sub> [page: int]",
-                         "/rank (inherit)<sub: rank_sub> <rank: string> <parent: string>",
+                         "/rank (inherit)<sub: rank_sub> <action: string> <rank: string> <parent: string>",
                          "/rank (weight)<sub: rank_sub> <rank: string> <weight: int>",
                          "/rank (prefix)<sub: rank_sub> <rank: string> <prefix: message>",
                          "/rank (suffix)<sub: rank_sub> <rank: string> <suffix: message>"};

@@ -63,6 +63,12 @@ namespace primebds {
         registerEvent(&EventListener::onEntityKnockback, *listener_);
         registerEvent(&EventListener::onPlayerGameModeChange, *listener_);
         registerEvent(&EventListener::onPlayerInteractActor, *listener_);
+        registerEvent(&EventListener::onPlayerTeleport, *listener_);
+        registerEvent(&EventListener::onPlayerBedEnter, *listener_);
+        registerEvent(&EventListener::onPlayerEmote, *listener_);
+        registerEvent(&EventListener::onPlayerSkinChange, *listener_);
+        registerEvent(&EventListener::onLeavesDecay, *listener_);
+        registerEvent(&EventListener::onItemPickup, *listener_);
         registerEvent(&EventListener::onServerLoad, *listener_);
 
         // Commands are declared in the ENDSTONE_PLUGIN macro body below;

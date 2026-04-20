@@ -191,7 +191,7 @@ void registerEndstoneCommands(endstone::detail::PluginDescriptionBuilder &b) {
         .permissions("primebds.command.blockscan");
 
     b.command("check").description("Checks a player's client info!")
-        .usages("/check <player: player> (info|mod|network|world)[info: info]")
+        .usages("/check <player: player> [(info|mod|network|world)<info: check_info>]")
         .permissions("primebds.command.check")
         .aliases("seen");
 
@@ -433,13 +433,13 @@ void registerEndstoneCommands(endstone::detail::PluginDescriptionBuilder &b) {
 
     b.command("rank").description("Manage server ranks!")
         .usages(
-            "/rank (set)<sub: rank_sub> <player: player> <rank: string>",
+            "/rank (set)<sub: rank_sub> <player: string> <rank: string>",
             "/rank (create)<sub: rank_sub> <name: string>",
             "/rank (delete)<sub: rank_sub> <name: string>",
             "/rank (info)<sub: rank_sub> <name: string>",
-            "/rank (perm)<sub: rank_sub> <action: string> <rank: string> <permission: message>",
+            "/rank (perm)<sub: rank_sub> <action: string> <rank: string> <permission: string> [state: bool]",
             "/rank (list)<sub: rank_sub> [page: int]",
-            "/rank (inherit)<sub: rank_sub> <rank: string> <parent: string>",
+            "/rank (inherit)<sub: rank_sub> <action: string> <rank: string> <parent: string>",
             "/rank (weight)<sub: rank_sub> <rank: string> <weight: int>",
             "/rank (prefix)<sub: rank_sub> <rank: string> <prefix: message>",
             "/rank (suffix)<sub: rank_sub> <rank: string> <suffix: message>")

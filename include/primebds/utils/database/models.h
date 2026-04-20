@@ -150,24 +150,4 @@ namespace primebds::db {
         int64_t expiry = 0;
     };
 
-    struct Rank {
-        std::string name;
-        int weight = 0;
-        std::string prefix;
-        std::string suffix;
-        std::string inherits;
-        std::vector<std::string> permissions;
-    };
-
-    struct AllowlistEntry {
-        std::string name;
-        std::string profile;
-    };
-
-    struct AllowlistProfile {
-        std::string name;
-        bool active = false;
-        std::string inherits;
-    };
-
 } // namespace primebds::db

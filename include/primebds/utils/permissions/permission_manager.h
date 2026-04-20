@@ -20,6 +20,14 @@ namespace primebds::permissions {
 
         void loadPermissions(endstone::Server &server);
 
+        /// Re-read only the permissions JSON from disk (does not rescan plugin perms).
+        /// Call this after /rank edits to refresh PERMISSIONS without expensive plugin scan.
+        void reloadPermissionsJson();
+
+        /// Invalidate the entire per-player rank-permission cache. Call after a rank edit
+        /// affects multiple players whose attachments need to be recomputed.
+        void clearAllPermCaches();
+
         std::map<std::string, bool> getRankPermissions(const std::string &rank);
         bool checkPermission(endstone::Player &player, const std::string &perm,
                              const std::string &rank);

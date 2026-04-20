@@ -60,30 +60,6 @@ namespace primebds::db {
         void setSpawn(const std::string &pos_json);
         std::optional<Spawn> getSpawn();
 
-        // Allowlist
-        std::vector<std::string> getAllowlistEntries();
-        bool addToAllowlist(const std::string &name);
-        bool removeFromAllowlist(const std::string &name);
-        bool isOnAllowlist(const std::string &name);
-        std::vector<AllowlistProfile> getAllowlistProfiles();
-        bool createAllowlistProfile(const std::string &name);
-        bool deleteAllowlistProfile(const std::string &name);
-        bool setActiveAllowlistProfile(const std::string &name);
-        bool setAllowlistInheritance(const std::string &profile, const std::string &parent);
-        void clearAllowlist();
-
-        // Ranks
-        std::vector<Rank> getAllRanks();
-        bool createRank(const std::string &name);
-        bool deleteRank(const std::string &name);
-        std::optional<Rank> getRank(const std::string &name);
-        bool addRankPermission(const std::string &rank, const std::string &perm);
-        bool removeRankPermission(const std::string &rank, const std::string &perm);
-        void setRankInheritance(const std::string &rank, const std::string &parent);
-        void setRankWeight(const std::string &rank, int weight);
-        void setRankPrefix(const std::string &rank, const std::string &prefix);
-        void setRankSuffix(const std::string &rank, const std::string &suffix);
-
         // Location encoding
         static std::string encodeLocation(double x, double y, double z,
                                           const std::string &dimension,

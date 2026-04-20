@@ -121,8 +121,10 @@ namespace primebds::permissions {
     std::map<std::string, bool> PermissionManager::getRankPermissions(const std::string &rank) {
         std::lock_guard lock(mutex_);
 
-        // Reload permissions from file
-        PERMISSIONS = config::ConfigManager::instance().loadPermissions();
+        // PERMISSIONS is populated by loadPermissions() / reloadPermissionsJson().
+        // If empty (called before initial load), do a one-time lazy load.
+        if (PERMISSIONS.empty())
+            PERMISSIONS = config::ConfigManager::instance().loadPermissions();
 
         // Normalize rank name
         std::string base_rank = "Default";
@@ -301,6 +303,20 @@ namespace primebds::permissions {
     void PermissionManager::invalidatePermCache(const std::string &xuid) {
         std::lock_guard lock(mutex_);
         perm_cache_.erase(xuid);
+    }
+
+    void PermissionManager::reloadPermissionsJson() {
+        std::lock_guard lock(mutex_);
+        PERMISSIONS = config::ConfigManager::instance().loadPermissions();
+        // Stale prefix/suffix and per-player caches must be cleared
+        prefix_cache_.clear();
+        suffix_cache_.clear();
+        perm_cache_.clear();
+    }
+
+    void PermissionManager::clearAllPermCaches() {
+        std::lock_guard lock(mutex_);
+        perm_cache_.clear();
     }
 
     std::string PermissionManager::getPermissionHeader(endstone::Plugin &plugin) {
