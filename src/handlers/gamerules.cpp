@@ -51,12 +51,20 @@ namespace primebds::handlers {
             for (auto *player : plugin.getServer().getOnlinePlayers()) {
                 if (!player)
                     continue;
-                plugin.getServer().getScheduler().runTask(plugin, [&plugin, player]() {
+                // Capture UUID by value; look up the player when the task runs.
+                // The raw pointer may dangle if the player disconnects before the
+                // next tick, which previously manifested as std::bad_alloc when
+                // accessing garbage memory inside reloadCustomPerms.
+                auto uuid = player->getUniqueId();
+                plugin.getServer().getScheduler().runTask(plugin, [&plugin, uuid]() {
+                    auto *p = plugin.getServer().getPlayer(uuid);
+                    if (!p)
+                        return;
                     try {
-                        plugin.reloadCustomPerms(*player);
+                        plugin.reloadCustomPerms(*p);
                     } catch (const std::exception &e) {
                         plugin.getLogger().error("Failed to reload perms for {}: {}",
-                                                 player->getName(), e.what());
+                                                 p->getName(), e.what());
                     } catch (...) {
                         plugin.getLogger().error("Failed to reload perms: unknown error");
                     }
