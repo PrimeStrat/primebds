@@ -278,6 +278,36 @@ namespace primebds::commands {
             });
         }
 
+        /// Open a ModalForm to edit a single plain-text file under the data folder
+        /// (used for things like discord.txt and motd.txt that are stored as raw
+        /// strings rather than JSON to avoid escape-noise).
+        void openPlainTextEditor(PrimeBDS &plugin, endstone::Player &player,
+                                 const std::string &title, const std::string &filename,
+                                 const std::string &label, const std::string &placeholder) {
+            auto &cfg = config::ConfigManager::instance();
+            std::string current = cfg.loadPlainText(filename);
+
+            utils::ModalFormBuilder form;
+            form.title(title);
+            form.textInput(label, placeholder, current);
+
+            auto player_name = player.getName();
+            form.show(player, [filename, player_name, &plugin](auto result) {
+                if (!result.has_value())
+                    return;
+                auto &values = result.value();
+                std::string new_value;
+                if (!values.empty()) {
+                    if (auto *s = std::get_if<std::string>(&values[0]))
+                        new_value = *s;
+                }
+                config::ConfigManager::instance().savePlainText(filename, new_value);
+                auto *p = plugin.getServer().getPlayer(player_name);
+                if (p)
+                    p->sendMessage("\u00a7aSaved!");
+            });
+        }
+
         /// Open the top-level config categories form.
         void openConfigCategories(PrimeBDS &plugin, endstone::Player &player) {
             auto &cfg = config::ConfigManager::instance();
@@ -294,6 +324,9 @@ namespace primebds::commands {
             }
             std::sort(categories.begin(), categories.end());
             categories.push_back("commands");
+            // Plain-text file editors (stored outside config.json)
+            categories.push_back("discord");
+            categories.push_back("motd");
 
             for (auto &cat : categories)
                 form.button("\u00a74" + formatLabel(cat));
@@ -314,6 +347,14 @@ namespace primebds::commands {
                 std::string chosen = categories[idx];
                 if (chosen == "commands")
                     openCommandEditor(plugin, *p);
+                else if (chosen == "discord")
+                    openPlainTextEditor(plugin, *p, "Discord Link", "discord.txt",
+                                        "Message shown by /discord",
+                                        "\u00a7bJoin our Discord: \u00a7ehttps://discord.gg/example");
+                else if (chosen == "motd")
+                    openPlainTextEditor(plugin, *p, "MOTD", "motd.txt",
+                                        "Message shown by /motd",
+                                        "Welcome to the server!");
                 else
                     openModuleEditor(plugin, *p, chosen);
             });
