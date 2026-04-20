@@ -15,26 +15,34 @@ namespace primebds::handlers {
     void handleTeleportEvent(PrimeBDS &plugin, endstone::PlayerTeleportEvent &event) {
         auto back_cfg = config::ConfigManager::instance().getModule("back");
         if (back_cfg.value("save_unnatural_teleports", false)) {
-            auto loc = event.getFrom();
-            auto encoded = plugin.serverdb->encodeLocation(
-                loc.getX(), loc.getY(), loc.getZ(), loc.getDimension().getName(),
-                loc.getPitch(), loc.getYaw());
-            plugin.serverdb->execute(
-                "INSERT OR REPLACE INTO last_warps (xuid, name, location) VALUES (?, ?, ?)",
-                {event.getPlayer().getXuid(), event.getPlayer().getName(), encoded});
+            try {
+                auto loc = event.getFrom();
+                auto encoded = plugin.serverdb->encodeLocation(
+                    loc.getX(), loc.getY(), loc.getZ(), loc.getDimension().getName(),
+                    loc.getPitch(), loc.getYaw());
+                plugin.serverdb->execute(
+                    "INSERT OR REPLACE INTO last_warps (xuid, name, location) VALUES (?, ?, ?)",
+                    {event.getPlayer().getXuid(), event.getPlayer().getName(), encoded});
+            } catch (const std::exception &e) {
+                plugin.getLogger().error("Failed to save teleport location: {}", e.what());
+            }
         }
     }
 
     void handleDeathEvent(PrimeBDS &plugin, endstone::PlayerDeathEvent &event) {
         auto back_cfg = config::ConfigManager::instance().getModule("back");
         if (back_cfg.value("save_death_locations", true)) {
-            auto loc = event.getPlayer().getLocation();
-            auto encoded = plugin.serverdb->encodeLocation(
-                loc.getX(), loc.getY(), loc.getZ(), loc.getDimension().getName(),
-                loc.getPitch(), loc.getYaw());
-            plugin.serverdb->execute(
-                "INSERT OR REPLACE INTO last_warps (xuid, name, location) VALUES (?, ?, ?)",
-                {event.getPlayer().getXuid(), event.getPlayer().getName(), encoded});
+            try {
+                auto loc = event.getPlayer().getLocation();
+                auto encoded = plugin.serverdb->encodeLocation(
+                    loc.getX(), loc.getY(), loc.getZ(), loc.getDimension().getName(),
+                    loc.getPitch(), loc.getYaw());
+                plugin.serverdb->execute(
+                    "INSERT OR REPLACE INTO last_warps (xuid, name, location) VALUES (?, ?, ?)",
+                    {event.getPlayer().getXuid(), event.getPlayer().getName(), encoded});
+            } catch (const std::exception &e) {
+                plugin.getLogger().error("Failed to save death location: {}", e.what());
+            }
         }
     }
 

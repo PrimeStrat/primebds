@@ -18,9 +18,7 @@ namespace primebds::commands {
 
     REGISTER_COMMAND(primebds, "PrimeBDS management command!", cmd_primebds,
                      info.usages = {
-                         "/primebds",
-                         "/primebds (info|reloadconfig)<action: pbds_action> [args: message]",
-                         "/primebds (config)<action: pbds_action> <keypath: string> [value: message]"};
+                         "/primebds (config|command|info|reloadconfig)[action: pbds_action]"};
                      info.permissions = {"primebds.command.primebds"};);
 
     namespace {
@@ -321,6 +319,37 @@ namespace primebds::commands {
             });
         }
 
+        /// Open a form listing every plugin command the player has permission to run.
+        /// Mirrors the python archive's `command_form` — selecting a button runs the
+        /// bare command (player can then add args via Minecraft's autocomplete).
+        void openCommandsMenu(PrimeBDS &plugin, endstone::Player &player) {
+            auto commands = plugin.getDescription().getCommands();
+            std::vector<std::string> names;
+            names.reserve(commands.size());
+            for (const auto &c : commands) {
+                const auto &perms = c.getPermissions();
+                if (perms.empty() || player.hasPermission(perms.front()))
+                    names.push_back(c.getName());
+            }
+            std::sort(names.begin(), names.end());
+
+            utils::ActionFormBuilder form;
+            form.title("Command GUI");
+            form.body("Choose a command to run:");
+            for (const auto &n : names)
+                form.button("\u00a74/" + n);
+
+            auto player_name = player.getName();
+            form.show(player, [&plugin, names, player_name](auto selection) {
+                if (!selection.has_value()) return;
+                int idx = selection.value();
+                if (idx < 0 || idx >= static_cast<int>(names.size())) return;
+                auto *p = plugin.getServer().getPlayer(player_name);
+                if (!p) return;
+                (void)plugin.getServer().dispatchCommand(*p, names[static_cast<size_t>(idx)]);
+            });
+        }
+
     } // anonymous namespace
 
     /// PrimeBDS management command handler.
@@ -328,13 +357,15 @@ namespace primebds::commands {
                              const std::vector<std::string> &args) {
         auto *player = sender.asPlayer();
 
+        // Bare /primebds opens the menu for player-ops; otherwise show info.
         if (args.empty()) {
             if (player && player->isOp()) {
                 openConfigCategories(plugin, *player);
-            } else {
-                sender.sendMessage("\u00a7dPrimeBDS v3.4.1");
-                sender.sendMessage("\u00a77Use /primebds <config|reloadconfig|info> for more options");
+                return true;
             }
+            sender.sendMessage("\u00a7dPrimeBDS");
+            sender.sendMessage("\u00a7dAn all-in-one essentials plugin for Minecraft Bedrock Edition.");
+            sender.sendMessage("\u00a77Use /primebds (config|command|info|reloadconfig)");
             return true;
         }
 
@@ -361,56 +392,23 @@ namespace primebds::commands {
             return true;
         }
 
-        if (sub == "config") {
+        if (sub == "config" || sub == "command") {
             if (!player) {
                 sender.sendMessage("\u00a7cThis subcommand can only be used by a player");
                 return false;
             }
-            if (!player->isOp()) {
+            if (sub == "config" && !player->isOp()) {
                 sender.sendMessage("\u00a7cOnly operators can modify the server config");
                 return false;
             }
-
-            if (args.size() < 2) {
+            if (sub == "config")
                 openConfigCategories(plugin, *player);
-                return true;
-            }
-
-            std::string key = args[1];
-
-            if (args.size() == 2) {
-                auto &cfg = config::ConfigManager::instance();
-                auto &conf = cfg.config();
-                auto *val = resolveJsonPath(conf, key);
-                if (!val)
-                    sender.sendMessage("\u00a7cConfig key \u00a7e" + key + " \u00a7cnot found");
-                else
-                    sender.sendMessage("\u00a7e" + key + " \u00a7a= \u00a7e" + val->dump());
-                return true;
-            }
-
-            std::string value;
-            for (size_t i = 2; i < args.size(); ++i) {
-                if (i > 2)
-                    value += " ";
-                value += args[i];
-            }
-
-            nlohmann::json jval;
-            try {
-                jval = nlohmann::json::parse(value);
-            } catch (...) {
-                jval = value;
-            }
-
-            auto &cfg = config::ConfigManager::instance();
-            setJsonPath(cfg.config(), key, jval);
-            cfg.save();
-            sender.sendMessage("\u00a7e" + key + " \u00a7aset to \u00a7e" + jval.dump());
+            else
+                openCommandsMenu(plugin, *player);
             return true;
         }
 
-        sender.sendMessage("\u00a7cUnknown subcommand. Use /primebds [config|reloadconfig|info]");
+        sender.sendMessage("\u00a7cUnknown subcommand. Use /primebds (config|command|info|reloadconfig)");
         return false;
     }
 

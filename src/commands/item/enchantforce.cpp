@@ -53,6 +53,10 @@ namespace primebds::commands {
             return false;
         }
 
+        // Convert enchantment name to EnchantmentId
+        auto enchant_id = endstone::EnchantmentId::minecraft(enchant_name);
+
+        int success_count = 0;
         for (auto *t : targets) {
             auto *p = dynamic_cast<endstone::Player *>(t);
             if (!p)
@@ -61,19 +65,24 @@ namespace primebds::commands {
             if (!held || held->getType() == endstone::ItemType::Air)
                 continue;
             auto meta = held->getItemMeta();
-            (void)meta->addEnchant(enchant_name, level, true);
-            held->setItemMeta(meta.get());
-            p->getInventory().setItem(p->getInventory().getHeldItemSlot(), *held);
+            if (meta->addEnchant(enchant_id, level, true)) {
+                held->setItemMeta(meta.get());
+                p->getInventory().setItem(p->getInventory().getHeldItemSlot(), *held);
+                success_count++;
+            }
         }
 
-        if (targets.size() == 1) {
-            auto *p = dynamic_cast<endstone::Player *>(targets[0]);
-            sender.sendMessage("\u00a7e" + (p ? p->getName() : "Player") +
-                               " \u00a7rwas enchanted with \u00a7e" + enchant_name +
+        if (success_count == 0) {
+            sender.sendMessage("\u00a7cNo players were holding an item to enchant");
+            return false;
+        }
+
+        if (success_count == 1) {
+            sender.sendMessage("\u00a7aEnchanted 1 player's item with \u00a7e" + enchant_name +
                                " \u00a7rlevel \u00a7e" + std::to_string(level));
         } else {
-            sender.sendMessage("\u00a7e" + std::to_string(targets.size()) +
-                               " \u00a7rplayers were enchanted with \u00a7e" + enchant_name +
+            sender.sendMessage("\u00a7aEnchanted " + std::to_string(success_count) +
+                               " players' items with \u00a7e" + enchant_name +
                                " \u00a7rlevel \u00a7e" + std::to_string(level));
         }
         return true;

@@ -55,15 +55,9 @@ namespace primebds::db {
                                {"cooldown", "REAL DEFAULT 0"},
                                {"delay", "REAL DEFAULT 0"}});
 
-        createTable("last_warp", {{"xuid", "TEXT"},
-                                  {"username", "TEXT"},
-                                  {"name", "TEXT"},
-                                  {"pos", "TEXT"},
-                                  {"cooldown", "REAL DEFAULT 0"},
-                                  {"delay", "REAL DEFAULT 0"},
-                                  {"cost", "REAL DEFAULT 0"},
-                                  {"UNIQUE (xuid)", ""},
-                                  {"UNIQUE (username)", ""}});
+        createTable("last_warps", {{"xuid", "TEXT UNIQUE NOT NULL"},
+                                   {"name", "TEXT"},
+                                   {"location", "TEXT"}});
 
         createTable("home_settings", {{"id", "INTEGER PRIMARY KEY CHECK (id = 1)"},
                                       {"delay", "REAL DEFAULT 0"},

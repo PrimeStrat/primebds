@@ -58,7 +58,10 @@ namespace primebds::commands {
             return false;
         }
 
-        endstone::ItemStack item(block_id, amount, data);
+        // Create ItemStack with ItemTypeId
+        auto item_type_id = endstone::ItemTypeId::minecraft(block_id);
+        endstone::ItemStack item(item_type_id, amount, data);
+
         for (auto *t : targets) {
             auto *p = dynamic_cast<endstone::Player *>(t);
             if (p)

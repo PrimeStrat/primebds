@@ -27,8 +27,10 @@ namespace primebds::commands {
             return true;
         }
 
-        auto user = plugin.db->getOnlineUser(player->getXuid());
-        if (!user || user->last_logout_pos.empty()) {
+        // Retrieve last saved location from last_warps table
+        auto row = plugin.serverdb->queryRow("SELECT location FROM last_warps WHERE xuid = ?",
+                                             {player->getXuid()});
+        if (!row || row->at("location").empty()) {
             sender.sendMessage("\u00a7cNo previous location found");
             return true;
         }
@@ -46,24 +48,29 @@ namespace primebds::commands {
             }
         }
 
-        // Parse stored position "x,y,z,dim"
-        std::string pos_str = user->last_logout_pos;
-        auto p1 = pos_str.find(',');
-        auto p2 = pos_str.find(',', p1 + 1);
-        auto p3 = pos_str.find(',', p2 + 1);
-        if (p1 == std::string::npos || p2 == std::string::npos) {
-            sender.sendMessage("\u00a7cSaved position data is invalid");
-            return true;
+        // Decode location and teleport
+        try {
+            auto decoded = plugin.serverdb->decodeLocation(row->at("location"));
+            auto *level = plugin.getServer().getLevel();
+            if (!level) {
+                sender.sendMessage("\u00a7cLevel not loaded");
+                return true;
+            }
+            auto *dim = level->getDimension(decoded["dimension"].get<std::string>());
+            if (!dim) {
+                sender.sendMessage("\u00a7cSaved dimension no longer exists");
+                return true;
+            }
+            endstone::Location loc(*dim, decoded["x"].get<double>(), decoded["y"].get<double>(),
+                                   decoded["z"].get<double>(), decoded["pitch"].get<float>(),
+                                   decoded["yaw"].get<float>());
+            player->teleport(loc);
+            player->sendMessage("\u00a7aTeleported to your last location");
+            back_cooldowns[player->getXuid()] = now;
+        } catch (const std::exception &e) {
+            sender.sendMessage("\u00a7cFailed to teleport: " + std::string(e.what()));
+            return false;
         }
-
-        // Teleport via command for dimension safety
-        std::string x = pos_str.substr(0, p1);
-        std::string y = pos_str.substr(p1 + 1, p2 - p1 - 1);
-        std::string z = pos_str.substr(p2 + 1, p3 != std::string::npos ? p3 - p2 - 1 : std::string::npos);
-
-        player->performCommand("tp " + x + " " + y + " " + z);
-        player->sendMessage("\u00a7aTeleported to your last location");
-        back_cooldowns[player->getXuid()] = now;
         return true;
     }
 
