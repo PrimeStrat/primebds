@@ -17,9 +17,13 @@ namespace primebds::commands {
     /// Shows the Discord invite link!
     static bool cmd_discord(PrimeBDS &plugin, endstone::CommandSender &sender,
                             const std::vector<std::string> &args) {
-        auto &cfg = config::ConfigManager::instance().config();
-        std::string link = cfg["modules"]["discord"].value("link", "https://discord.gg/example");
-        sender.sendMessage("\u00a7bJoin our Discord: \u00a7e" + link);
+        auto discord = config::ConfigManager::instance().getModule("discord");
+        std::string msg = discord.value("command", "");
+        if (msg.empty()) {
+            sender.sendMessage("\u00a7cNo Discord link has been configured.");
+            return true;
+        }
+        sender.sendMessage(msg);
         return true;
     }
 

@@ -17,17 +17,12 @@ namespace primebds::commands {
     /// Displays the server rules!
     static bool cmd_rules(PrimeBDS &plugin, endstone::CommandSender &sender,
                           const std::vector<std::string> &args) {
-        auto &cfg = config::ConfigManager::instance().config();
-        auto rules_arr = cfg["modules"]["rules"]["list"];
-        if (!rules_arr.is_array() || rules_arr.empty()) {
-            sender.sendMessage("\u00a7eNo rules have been set");
-            return true;
-        }
+        auto rules = config::ConfigManager::instance().loadRules();
 
         sender.sendMessage("\u00a76Server Rules:");
         int idx = 1;
-        for (auto &r : rules_arr) {
-            sender.sendMessage("\u00a7e" + std::to_string(idx++) + ". \u00a7f" + r.get<std::string>());
+        for (auto &r : rules) {
+            sender.sendMessage("\u00a7e" + std::to_string(idx++) + ". \u00a7f" + r);
         }
         return true;
     }

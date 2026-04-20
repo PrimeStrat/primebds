@@ -8,7 +8,6 @@
 #include <iostream>
 #include <regex>
 #include <sstream>
-#include <thread>
 
 #ifdef _WIN32
 #include <winhttp.h>
@@ -26,10 +25,8 @@ namespace primebds::utils {
 
     void log(endstone::Server &server, const std::string &message,
              const std::string &type, const std::string &permission) {
-        // Discord relay in background thread
-        std::thread([=]()
-                    { discordRelay(message, type); })
-            .detach();
+        // Discord relay - called synchronously to avoid dangling threads after plugin reload
+        discordRelay(message, type);
 
         // Notify online players with the appropriate permission
         if (permission.empty())

@@ -14,10 +14,13 @@ namespace primebds::config {
             {"combat", {{"enabled", true}, {"hit_cooldown", 0.45}, {"custom_damage", {{"enabled", false}, {"base_damage", 1.0}, {"critical_multiplier", 1.5}, {"sprint_bonus", 0.5}}}, {"custom_knockback", {{"enabled", false}, {"base_knockback_x", 1.0}, {"base_knockback_y", 0.4}, {"sprint_multiplier", 1.5}}}, {"tag_overrides", {{"enabled", false}}}}},
             {"connections", {{"custom_join_message", {{"enabled", true}, {"message", "§a+ §7{player}"}}}, {"custom_leave_message", {{"enabled", true}, {"message", "§c- §7{player}"}}}, {"motd", {{"enabled", false}, {"message", "§eWelcome, {player}!"}}}, {"alt_detection", {{"enabled", true}}}}},
             {"crasher_patch", {{"enabled", true}}},
+            {"discord", {{"command", ""}}}, 
             {"discord_webhook", {{"command_logs", {{"enabled", false}, {"webhook", ""}}}, {"moderation_logs", {{"enabled", false}, {"webhook", ""}}}, {"chat_logs", {{"enabled", false}, {"webhook", ""}}}, {"connection_logs", {{"enabled", false}, {"webhook", ""}}}, {"embed_for_log", {{"enabled", false}, {"title", "Log"}, {"color", 0x3498db}}}}},
             {"gamerules", {{"bed_enabled", true}, {"emotes_enabled", true}, {"leaves_decay_enabled", true}, {"skin_change_enabled", true}}},
+            {"motd", {{"message", ""}}},
             {"homes", {{"enabled", true}, {"max_homes", 5}, {"teleport_delay", 0}, {"teleport_cooldown", 0}}},
             {"permissions_manager", {{"minecraft", true}, {"primebds", true}, {"endstone", true}, {"*", true}}},
+            {"rules", {{"list", nlohmann::json::array()}}},
             {"spawns", {{"enabled", true}, {"teleport_delay", 0}, {"teleport_cooldown", 0}}},
             {"warps", {{"enabled", true}, {"teleport_delay", 0}, {"teleport_cooldown", 0}}}};
     }
