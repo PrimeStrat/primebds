@@ -44,13 +44,23 @@ namespace primebds::handlers {
         try {
             permissions::PermissionManager::instance().loadPermissions(plugin.getServer());
 
+            // Defer per-player permission reload to the next tick. ServerLoadEvent
+            // is dispatched synchronously from the command pipeline (e.g. during
+            // /reload), and reloadCustomPerms internally dispatches op/deop,
+            // which would re-enter the command system and crash Bedrock.
             for (auto *player : plugin.getServer().getOnlinePlayers()) {
-                try {
-                    plugin.reloadCustomPerms(*player);
-                } catch (const std::exception &e) {
-                    plugin.getLogger().error("Failed to reload perms for {}: {}",
-                                             player ? player->getName() : "<null>", e.what());
-                }
+                if (!player)
+                    continue;
+                plugin.getServer().getScheduler().runTask(plugin, [&plugin, player]() {
+                    try {
+                        plugin.reloadCustomPerms(*player);
+                    } catch (const std::exception &e) {
+                        plugin.getLogger().error("Failed to reload perms for {}: {}",
+                                                 player->getName(), e.what());
+                    } catch (...) {
+                        plugin.getLogger().error("Failed to reload perms: unknown error");
+                    }
+                });
             }
         } catch (const std::exception &e) {
             plugin.getLogger().error("ServerLoadEvent handler failed: {}", e.what());
