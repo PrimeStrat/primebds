@@ -48,8 +48,6 @@ namespace primebds::handlers::combat {
         auto no_fire = getCustomTag(cfg, source_tags, "disable_fire_damage");
         auto no_explosion = getCustomTag(cfg, source_tags, "disable_explosion_damage");
 
-        double cd = kb_cooldown.value_or(0.45);
-
         // Fire damage disable
         if (no_fire.has_value() && no_fire.value() != 0.0 &&
             (damage_type == "fire_tick" || damage_type == "fire" || damage_type == "lava")) {
@@ -78,9 +76,12 @@ namespace primebds::handlers::combat {
 
         plugin.entity_last_hit[entity_key] = damage_type;
 
-        // Hit cooldown enforcement
-        if (now - last_hit_time < cd && damage_type == "entity_attack")
-            event.setCancelled(true);
+        // Hit cooldown enforcement (only if configured)
+        if (kb_cooldown.has_value()) {
+            double cd = kb_cooldown.value();
+            if (now - last_hit_time < cd && damage_type == "entity_attack")
+                event.setCancelled(true);
+        }
     }
 
 } // namespace primebds::handlers::combat

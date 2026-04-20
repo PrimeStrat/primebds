@@ -28,7 +28,6 @@ namespace primebds::handlers::combat {
         }
 
         auto kb_cooldown_opt = getCustomTag(cfg, tags, "hit_cooldown_in_seconds");
-        double kb_cooldown = kb_cooldown_opt.value_or(0.45);
         auto now = std::chrono::duration<double>(
                        std::chrono::steady_clock::now().time_since_epoch())
                        .count();
@@ -37,10 +36,12 @@ namespace primebds::handlers::combat {
         if (cd_it != plugin.entity_damage_cooldowns.end())
             last_hit_time = cd_it->second;
 
-        // Cooldown tracking
-        if (now - last_hit_time >= kb_cooldown && last_hit_type == "entity_attack") {
-            plugin.entity_damage_cooldowns[entity_key] = now;
-        } else if (now - last_hit_time < kb_cooldown && last_hit_type == "entity_attack") {
+        // Cooldown tracking (only if configured)
+        if (kb_cooldown_opt.has_value()) {
+            double kb_cooldown = kb_cooldown_opt.value();
+            if (now - last_hit_time >= kb_cooldown && last_hit_type == "entity_attack") {
+                plugin.entity_damage_cooldowns[entity_key] = now;
+            } else if (now - last_hit_time < kb_cooldown && last_hit_type == "entity_attack") {
             // Check enchant knockback
             if (source_player) {
                 auto held = source_player->getInventory().getItemInMainHand();
@@ -56,9 +57,10 @@ namespace primebds::handlers::combat {
                     }
                 }
             }
-            plugin.entity_last_hit[entity_key] = "";
-            event.setCancelled(true);
-            return;
+                plugin.entity_last_hit[entity_key] = "";
+                event.setCancelled(true);
+                return;
+            }
         }
 
         auto kb = event.getKnockback();
