@@ -186,13 +186,22 @@ namespace primebds {
             }
         }
 
-        // Remove any existing primebdsoverride attachment
-        for (auto *info : player.getEffectivePermissions()) {
-            if (info->getPermission() == "primebdsoverride") {
-                auto *att = info->getAttachment();
-                if (att)
-                    att->remove();
+        // Remove any existing primebdsoverride attachment.
+        // Collect attachments first; calling remove() while iterating
+        // invalidates the PermissionAttachmentInfo pointers held by other
+        // entries in the set, which previously surfaced as std::bad_alloc.
+        {
+            std::set<endstone::PermissionAttachment *> to_remove;
+            for (auto *info : player.getEffectivePermissions()) {
+                if (!info)
+                    continue;
+                if (info->getPermission() == "primebdsoverride") {
+                    if (auto *att = info->getAttachment())
+                        to_remove.insert(att);
+                }
             }
+            for (auto *att : to_remove)
+                att->remove();
         }
 
         // Create new attachment and apply all permissions
