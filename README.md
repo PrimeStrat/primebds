@@ -1,4 +1,4 @@
-# Hello!
+# PrimeBDS
 This is PrimeBDS, an essentials plugin for diagnostics, stability, and quality of life on Minecraft Bedrock Edition.
 This plugin runs on the Endstone plugin loader: https://endstone.dev/latest/
 
